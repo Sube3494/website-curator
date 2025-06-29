@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useSupabaseAuth } from "@/lib/supabase-auth-context"
-import { useTheme } from "@/lib/theme-context"
+import { useTheme } from "next-themes"
 import { useQueryClient } from "@tanstack/react-query"
 import { websiteKeys } from "@/lib/hooks/use-websites"
 import { db } from "@/lib/supabase"
@@ -25,7 +25,11 @@ interface HeaderProps {
 
 export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
   const { user, logout } = useSupabaseAuth()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
+
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light")
+  }
   const queryClient = useQueryClient()
 
   // 预加载管理面板数据
@@ -112,10 +116,10 @@ export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
                     <div className="flex items-center gap-2 mt-2">
                       <div
                         className={`px-2 py-1 rounded-full text-xs font-medium ${user?.role === "super_admin"
-                            ? "bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700 dark:from-yellow-900/30 dark:to-orange-900/30 dark:text-orange-300"
-                            : user?.role === "admin"
-                              ? "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 dark:from-purple-900/30 dark:to-pink-900/30 dark:text-purple-300"
-                              : "bg-gradient-to-r from-emerald-100 to-cyan-100 text-emerald-700 dark:from-emerald-900/30 dark:to-cyan-900/30 dark:text-emerald-300"
+                          ? "bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700 dark:from-yellow-900/30 dark:to-orange-900/30 dark:text-orange-300"
+                          : user?.role === "admin"
+                            ? "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 dark:from-purple-900/30 dark:to-pink-900/30 dark:text-purple-300"
+                            : "bg-gradient-to-r from-emerald-100 to-cyan-100 text-emerald-700 dark:from-emerald-900/30 dark:to-cyan-900/30 dark:text-emerald-300"
                           }`}
                       >
                         {user?.role === "super_admin" ? "超级管理员" : user?.role === "admin" ? "管理员" : "用户"}

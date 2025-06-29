@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSupabaseAuth } from "@/lib/supabase-auth-context"
-import { ThemeProvider } from "@/lib/theme-context"
+import { ThemeProvider } from "@/components/theme-provider"
 import { SystemSettingsProvider } from "@/lib/system-settings-context"
 import { SupabaseWebsitesProvider } from "@/lib/supabase-websites-context"
 import { AuthPage } from "@/components/auth/auth-page"
@@ -150,7 +150,12 @@ function AppContent() {
 export default function App() {
   return (
     <ReactQueryProvider>
-      <ThemeProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
         <SupabaseAuthProvider>
           <SystemSettingsProvider>
             <SupabaseWebsitesProvider>
