@@ -1,6 +1,16 @@
+<div align="center">
+
 # 🌐 Website Curator
 
+<img src="public/android-chrome-512x512.png" alt="Website Curator Logo" width="120" height="120">
+
 一个现代化的网站收藏和管理平台，基于 Next.js 和 Supabase 构建。
+
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/) [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/) [![React](https://img.shields.io/badge/React-19-blue)](https://reactjs.org/) [![Supabase](https://img.shields.io/badge/Supabase-Database-green)](https://supabase.com/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
+</div>
+
+---
 
 ## ✨ 功能特性
 
@@ -14,6 +24,64 @@
 - 👥 **用户管理** - 完整的用户权限管理系统
 - ⚙️ **系统设置** - 灵活的系统配置管理
 
+## 📸 系统预览
+
+<div align="center">
+
+### 🏠 主页界面
+*网站浏览、搜索和分类筛选*
+
+<img src="docs/images/homepage-light.png" alt="主页界面 - 浅色主题" width="800">
+
+<details>
+<summary>🌙 查看深色主题</summary>
+<br>
+<img src="docs/images/homepage-dark.png" alt="主页界面 - 深色主题" width="800">
+</details>
+
+---
+
+### 📱 响应式设计
+*完美适配移动设备*
+
+<img src="docs/images/mobile-homepage.png" alt="移动端界面" width="300">
+
+---
+
+### 🔧 管理后台
+*强大的后台管理功能*
+
+<img src="docs/images/admin-dashboard.png" alt="管理后台界面" width="800">
+
+---
+
+### ⭐ 用户功能
+*个人收藏和网站提交*
+
+<img src="docs/images/favorites-page.png" alt="收藏页面" width="800">
+
+*网站提交*
+
+<img src="docs/images/websites-sumbission.png" alt="网站提交页面" width="800">
+
+</div>
+
+## 📋 主要功能
+
+<div align="center">
+
+| 功能模块       | 描述                     | 用户角色   |
+| -------------- | ------------------------ | ---------- |
+| 🏠 **主页浏览** | 网站展示、搜索、分类筛选 | 所有用户   |
+| ⭐ **收藏管理** | 个人网站收藏和管理       | 注册用户   |
+| 📝 **网站提交** | 提交新网站等待审核       | 注册用户   |
+| 🔧 **网站管理** | 审核、编辑、删除网站     | 管理员     |
+| 🏷️ **分类管理** | 管理网站分类和标签       | 管理员     |
+| 👥 **用户管理** | 用户权限和状态管理       | 超级管理员 |
+| ⚙️ **系统设置** | 全局系统配置管理         | 超级管理员 |
+
+</div>
+
 ## 🛠️ 技术栈
 
 - **前端框架**: Next.js 15 + React 19
@@ -24,6 +92,32 @@
 - **表单处理**: React Hook Form + Zod
 - **测试**: Playwright
 - **包管理**: pnpm
+
+## 🏗️ 系统架构
+
+<div align="center">
+
+**[📋 查看详细架构文档](docs/ARCHITECTURE.md)**
+
+</div>
+
+### 技术栈概览
+
+```mermaid
+graph LR
+    A[React 19] --> B[Next.js 15]
+    B --> C[Tailwind CSS]
+    B --> D[shadcn/ui]
+    B --> E[Supabase]
+    E --> F[PostgreSQL]
+
+    style A fill:#61dafb
+    style B fill:#000000,color:#fff
+    style C fill:#38bdf8
+    style D fill:#000000,color:#fff
+    style E fill:#3ecf8e
+    style F fill:#336791,color:#fff
+```
 
 ## 🚀 快速开始
 
@@ -149,6 +243,14 @@ pnpm test:headed
 
 **Sube** - [GitHub](https://github.com/Sube3494)
 
+## 🤝 贡献者
+
+<div align="center">
+
+[![Contributors](https://contrib.rocks/image?repo=Sube3494/website-curator)](https://github.com/Sube3494/website-curator/graphs/contributors)
+
+</div>
+
 ## 📚 文档
 
 - 📖 [部署指南](DEPLOYMENT.md) - 详细的部署说明
@@ -164,6 +266,22 @@ pnpm test:headed
 - [Tailwind CSS](https://tailwindcss.com/)
 - [shadcn/ui](https://ui.shadcn.com/)
 
+## 📊 项目统计
+
+<div align="center">
+
+![GitHub stars](https://img.shields.io/github/stars/Sube3494/website-curator?style=social) ![GitHub forks](https://img.shields.io/github/forks/Sube3494/website-curator?style=social) ![GitHub issues](https://img.shields.io/github/issues/Sube3494/website-curator) ![GitHub pull requests](https://img.shields.io/github/issues-pr/Sube3494/website-curator)
+
+[![GitHub Activity Graph](https://github-readme-activity-graph.vercel.app/graph?username=Sube3494&repo=website-curator&theme=react-dark)](https://github.com/Sube3494/website-curator)
+
+</div>
+
 ---
 
+<div align="center">
+
 如果这个项目对您有帮助，请给个 ⭐️！
+
+**[⬆ 回到顶部](#-website-curator)**
+
+</div>
