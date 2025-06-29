@@ -1,4 +1,4 @@
--- Website Curator 完整数据库初始化脚本
+-- Website Curator 完整数据库初始化脚本 v1.1.0
 -- 在 Supabase SQL 编辑器中运行此脚本
 -- 此脚本是幂等的，可以安全地重复运行
 --
@@ -8,6 +8,8 @@
 -- - 创建管理员 RPC 函数
 -- - 插入初始数据（分类、标签、示例网站）
 -- - 分类名称已汉化为中文
+-- - 性能优化索引和约束
+-- - Favicon API 支持优化
 
 -- ============================================================================
 -- 1. 创建枚举类型
@@ -173,8 +175,11 @@ INSERT INTO tags (name) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- 插入初始系统设置
-INSERT INTO system_settings (key, value, description)
-VALUES ('user_submissions', '{"enabled": true}', '允许普通用户提交网站')
+INSERT INTO system_settings (key, value, description) VALUES
+  ('user_submissions', '{"enabled": true}', '允许普通用户提交网站'),
+  ('favicon_cache_duration', '{"hours": 24}', 'Favicon缓存时长（小时）'),
+  ('max_websites_per_user', '{"limit": 10}', '每个用户最大提交网站数量'),
+  ('auto_approve_trusted_users', '{"enabled": false}', '是否自动批准可信用户提交的网站')
 ON CONFLICT (key) DO NOTHING;
 
 -- 插入示例网站数据
@@ -610,20 +615,88 @@ $$;
 -- 8. 创建索引以提高性能
 -- ============================================================================
 
+-- 基础索引
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, status);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- 网站相关索引
 CREATE INDEX IF NOT EXISTS idx_websites_status ON websites(status);
 CREATE INDEX IF NOT EXISTS idx_websites_category_id ON websites(category_id);
 CREATE INDEX IF NOT EXISTS idx_websites_submitted_by ON websites(submitted_by);
+CREATE INDEX IF NOT EXISTS idx_websites_status_category ON websites(status, category_id);
+CREATE INDEX IF NOT EXISTS idx_websites_created_at ON websites(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_websites_title_search ON websites USING gin(to_tsvector('english', title));
+CREATE INDEX IF NOT EXISTS idx_websites_description_search ON websites USING gin(to_tsvector('english', description));
+CREATE INDEX IF NOT EXISTS idx_websites_url ON websites(url);
+
+-- 收藏相关索引
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_website_id ON favorites(website_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_created_at ON favorites(created_at DESC);
+
+-- 标签相关索引
 CREATE INDEX IF NOT EXISTS idx_website_tags_website_id ON website_tags(website_id);
 CREATE INDEX IF NOT EXISTS idx_website_tags_tag_id ON website_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+
+-- 分类相关索引
+CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
+
+-- 系统设置索引
 CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key);
 
 -- ============================================================================
--- 8. 添加表和字段注释
+-- 8. 添加数据约束和验证
+-- ============================================================================
+
+-- 添加URL格式验证约束（如果不存在）
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = 'websites_url_format_check'
+                   AND table_name = 'websites') THEN
+        ALTER TABLE websites ADD CONSTRAINT websites_url_format_check
+        CHECK (url ~* '^https?://[^\s/$.?#].[^\s]*$');
+    END IF;
+END $$;
+
+-- 添加邮箱格式验证约束（如果不存在）
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = 'users_email_format_check'
+                   AND table_name = 'users') THEN
+        ALTER TABLE users ADD CONSTRAINT users_email_format_check
+        CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+    END IF;
+END $$;
+
+-- 添加标题长度约束（如果不存在）
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = 'websites_title_length_check'
+                   AND table_name = 'websites') THEN
+        ALTER TABLE websites ADD CONSTRAINT websites_title_length_check
+        CHECK (char_length(title) >= 1 AND char_length(title) <= 200);
+    END IF;
+END $$;
+
+-- 添加分类名称长度约束（如果不存在）
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = 'categories_name_length_check'
+                   AND table_name = 'categories') THEN
+        ALTER TABLE categories ADD CONSTRAINT categories_name_length_check
+        CHECK (char_length(name) >= 1 AND char_length(name) <= 50);
+    END IF;
+END $$;
+
+-- ============================================================================
+-- 9. 添加表和字段注释
 -- ============================================================================
 
 COMMENT ON TYPE user_role IS '用户角色：user=普通用户，admin=管理员，super_admin=超级管理员';
@@ -644,7 +717,7 @@ COMMENT ON COLUMN system_settings.value IS 'JSON格式的设置值';
 COMMENT ON COLUMN system_settings.description IS '设置项描述';
 
 -- ============================================================================
--- 9. 验证安装
+-- 10. 验证安装
 -- ============================================================================
 
 -- 显示创建的表
@@ -662,5 +735,10 @@ SELECT
   (SELECT COUNT(*) FROM websites) as websites_count,
   (SELECT COUNT(*) FROM system_settings) as settings_count;
 
+-- 显示系统设置
+SELECT 'System settings:' as info;
+SELECT key, description FROM system_settings ORDER BY key;
+
 -- 完成提示
-SELECT '✅ Website Curator 数据库初始化完成！' as message;
+SELECT '✅ Website Curator 数据库初始化完成！v1.1.0' as message;
+SELECT '📊 新增功能：性能优化索引、数据约束验证、Favicon缓存支持' as features;
