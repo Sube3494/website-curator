@@ -1071,38 +1071,40 @@ export function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="websites" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center justify-center overflow-x-auto scrollbar-hide pb-2">
-            <TabsList className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-lg p-1.5 text-base sm:text-lg lg:text-xl flex sm:grid sm:grid-cols-4 w-full sm:max-w-4xl gap-1 min-w-max sm:min-w-0 mx-2 sm:mx-0">
+          <div className="w-full overflow-x-auto pb-2 [scrollbar-width:thin] [scrollbar-color:rgba(156,163,175,0.5)_transparent]">
+            <div className="flex items-center justify-center min-w-max">
+              <TabsList className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-lg p-1.5 flex gap-1 min-w-max mx-2">
               <TabsTrigger
                 value="websites"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-50 data-[state=active]:to-pink-50 dark:data-[state=active]:from-purple-900/20 dark:data-[state=active]:to-pink-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg flex flex-row items-center gap-1 font-medium rounded-lg whitespace-nowrap flex-shrink-0"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-50 data-[state=active]:to-pink-50 dark:data-[state=active]:from-purple-900/20 dark:data-[state=active]:to-pink-900/20 dark:data-[state=active]:text-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-sm sm:text-base flex flex-row items-center gap-1 font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
                 <span>网站</span>
                 {stats.pendingWebsites > 0 && (
-                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.5rem] text-center">
+                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
                     {stats.pendingWebsites}
                   </span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="categories"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-50 data-[state=active]:to-orange-50 dark:data-[state=active]:from-amber-900/20 dark:data-[state=active]:to-orange-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg whitespace-nowrap flex-shrink-0"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-50 data-[state=active]:to-orange-50 dark:data-[state=active]:from-amber-900/20 dark:data-[state=active]:to-orange-900/20 dark:data-[state=active]:text-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
                 分类
               </TabsTrigger>
               <TabsTrigger
                 value="users"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-50 data-[state=active]:to-purple-50 dark:data-[state=active]:from-indigo-900/20 dark:data-[state=active]:to-purple-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg whitespace-nowrap flex-shrink-0"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-50 data-[state=active]:to-purple-50 dark:data-[state=active]:from-indigo-900/20 dark:data-[state=active]:to-purple-900/20 dark:data-[state=active]:text-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
                 用户
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-50 data-[state=active]:to-teal-50 dark:data-[state=active]:from-green-900/20 dark:data-[state=active]:to-teal-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg whitespace-nowrap flex-shrink-0"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-50 data-[state=active]:to-teal-50 dark:data-[state=active]:from-green-900/20 dark:data-[state=active]:to-teal-900/20 dark:data-[state=active]:text-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
                 系统设置
               </TabsTrigger>
-            </TabsList>
+              </TabsList>
+            </div>
           </div>
 
           <TabsContent value="websites" className="space-y-6">

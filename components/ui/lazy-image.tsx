@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Globe } from "lucide-react"
+import { shouldSkipFavicon, getOptimizedFaviconUrl, devLog } from "@/lib/dev-config"
 
 interface LazyImageProps {
   src: string
@@ -23,11 +24,28 @@ export function LazyImage({
   const [isLoaded, setIsLoaded] = useState(false)
   const [isInView, setIsInView] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const [attemptedProxy, setAttemptedProxy] = useState<'none' | 'google' | 'custom'>('none')
+  const [attemptedProxy, setAttemptedProxy] = useState<'none' | 'google' | 'custom' | 'failed'>('none')
+  const [retryCount, setRetryCount] = useState(0)
   const imgRef = useRef<HTMLImageElement>(null)
+  const maxRetries = 1 // 减少重试次数，避免过多请求
 
   const imgSrc = (() => {
-    if (!isFavicon || !hasError) return src;
+    if (!isFavicon || !hasError) {
+      // 在开发环境中优化favicon URL
+      if (isFavicon) {
+        const optimizedUrl = getOptimizedFaviconUrl(src)
+        if (optimizedUrl === null && shouldSkipFavicon()) {
+          return null // 开发环境跳过favicon
+        }
+        return optimizedUrl || src
+      }
+      return src
+    }
+
+    // 如果重试次数过多，直接返回fallback
+    if (retryCount >= maxRetries) {
+      return null;
+    }
 
     if (attemptedProxy === 'none') {
       return `https://www.google.com/s2/favicons?domain=${extractDomain(src)}`;
@@ -60,21 +78,37 @@ export function LazyImage({
     setHasError(false)
     setAttemptedProxy('none')
     setIsLoaded(false)
+    setRetryCount(0)
   }, [src])
 
   const handleLoad = () => {
     setIsLoaded(true)
+    setRetryCount(0) // 重置重试计数
   }
 
   const handleError = () => {
     if (isFavicon) {
+      // 在开发环境记录favicon错误
+      devLog.warn(`Favicon加载失败: ${imgSrc}`)
+
+      const newRetryCount = retryCount + 1
+      setRetryCount(newRetryCount)
+
+      // 如果重试次数过多，停止尝试
+      if (newRetryCount >= maxRetries) {
+        setAttemptedProxy('failed')
+        setHasError(true)
+        onError?.()
+        return
+      }
+
+      // 简化fallback策略，减少请求次数
       if (attemptedProxy === 'none') {
         setAttemptedProxy('google')
         setHasError(true)
-      } else if (attemptedProxy === 'google') {
-        setAttemptedProxy('custom')
-        setHasError(true)
       } else {
+        // 直接失败，不再尝试自定义API
+        setAttemptedProxy('failed')
         setHasError(true)
         onError?.()
       }
@@ -102,7 +136,7 @@ export function LazyImage({
   }
 
   const renderFallback = () => {
-    if (isFavicon && attemptedProxy !== 'custom') {
+    if (isFavicon && attemptedProxy !== 'failed') {
       return <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 ${className}`} />
     }
 
@@ -117,7 +151,8 @@ export function LazyImage({
     return <div className={`bg-gray-200 dark:bg-gray-700 ${className}`} />
   }
 
-  if (hasError && (!isFavicon || attemptedProxy === 'custom')) {
+  // 如果没有有效的图片源或已经失败，显示fallback
+  if (!imgSrc || (hasError && (!isFavicon || attemptedProxy === 'failed'))) {
     return renderFallback()
   }
 
@@ -131,6 +166,13 @@ export function LazyImage({
             } ${className}`}
           onLoad={handleLoad}
           onError={handleError}
+          loading="lazy"
+          // 添加错误处理属性
+          onAbort={() => {
+            if (isFavicon) {
+              console.warn('Favicon加载被中止:', imgSrc)
+            }
+          }}
         />
       )}
       {!isLoaded && isInView && !hasError && (

@@ -15,5 +15,6 @@ export function useIsMobile() {
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
-  return !!isMobile
+  // 在hydration完成前返回false，避免不匹配
+  return isMobile === undefined ? false : isMobile
 }

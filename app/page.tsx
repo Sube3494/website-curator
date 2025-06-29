@@ -14,6 +14,8 @@ import { SupabaseAuthProvider } from "@/lib/supabase-auth-context"
 import { ReactQueryProvider } from "@/lib/react-query-provider"
 import { PerformanceMonitor } from "@/components/ui/performance-monitor"
 import { Toaster } from "sonner"
+import { GlobalErrorHandler } from "@/components/ui/error-boundary"
+import { NetworkMonitor } from "@/components/ui/network-monitor"
 import { SystemSettingsPage } from "@/components/settings/system-settings-page"
 
 function AppContent() {
@@ -137,6 +139,8 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <GlobalErrorHandler />
+      <NetworkMonitor />
       <Header onNavigate={handleNavigate} currentPage={currentPage} onShowAuth={() => setShowAuth(true)} />
       <main className="flex-1">
         {renderPage()}

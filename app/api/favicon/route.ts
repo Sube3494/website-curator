@@ -7,12 +7,44 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 
+// 简单的内存缓存，避免重复请求
+const faviconCache = new Map<string, { data: any; timestamp: number; success: boolean }>()
+const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
+const ERROR_CACHE_DURATION = 30 * 60 * 1000 // 错误缓存30分钟
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const url = searchParams.get('url')
 
   if (!url) {
     return NextResponse.json({ error: 'URL parameter is required' }, { status: 400 })
+  }
+
+  // 检查缓存
+  const cached = faviconCache.get(url)
+  if (cached) {
+    const age = Date.now() - cached.timestamp
+    const maxAge = cached.success ? CACHE_DURATION : ERROR_CACHE_DURATION
+
+    if (age < maxAge) {
+      if (cached.success) {
+        return new NextResponse(cached.data.buffer, {
+          headers: cached.data.headers
+        })
+      } else {
+        // 返回缓存的错误，减少重复请求
+        return NextResponse.json(cached.data, {
+          status: 404,
+          headers: {
+            'Cache-Control': 'public, max-age=1800',
+            'Access-Control-Allow-Origin': '*',
+          }
+        })
+      }
+    } else {
+      // 清理过期缓存
+      faviconCache.delete(url)
+    }
   }
 
   try {
@@ -43,31 +75,57 @@ export async function GET(request: NextRequest) {
 
     // 获取图片数据
     const imageBuffer = await response.arrayBuffer()
-    
+
+    const responseHeaders = {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=86400, s-maxage=86400', // 缓存1天
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
+
+    // 缓存成功结果
+    faviconCache.set(url, {
+      data: { buffer: imageBuffer, headers: responseHeaders },
+      timestamp: Date.now(),
+      success: true
+    })
+
     // 返回图片，设置适当的缓存头
     return new NextResponse(imageBuffer, {
       status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400', // 缓存1天
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
+      headers: responseHeaders,
     })
   } catch (error) {
-    console.error('Favicon fetch error:', error)
-    
+    // 减少错误日志的详细程度，避免控制台污染
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    // 只在开发环境记录详细错误
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`Favicon fetch failed for ${url}: ${errorMessage}`)
+    }
+
+    const errorResponse = {
+      error: 'Failed to fetch favicon',
+      details: errorMessage,
+      url: url
+    }
+
+    // 缓存错误结果，避免重复请求
+    faviconCache.set(url, {
+      data: errorResponse,
+      timestamp: Date.now(),
+      success: false
+    })
+
     // 返回默认的 favicon 或错误响应
-    return NextResponse.json(
-      { error: 'Failed to fetch favicon' }, 
-      { 
-        status: 404,
-        headers: {
-          'Cache-Control': 'public, max-age=300', // 错误缓存5分钟
-        }
+    return NextResponse.json(errorResponse, {
+      status: 404,
+      headers: {
+        'Cache-Control': 'public, max-age=1800', // 错误缓存30分钟
+        'Access-Control-Allow-Origin': '*',
       }
-    )
+    })
   }
 }
 

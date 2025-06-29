@@ -16,6 +16,7 @@ import { useTheme } from "next-themes"
 import { useQueryClient } from "@tanstack/react-query"
 import { websiteKeys } from "@/lib/hooks/use-websites"
 import { db } from "@/lib/supabase"
+import { useEffect, useState } from "react"
 
 interface HeaderProps {
   onNavigate: (page: string) => void
@@ -26,6 +27,12 @@ interface HeaderProps {
 export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
   const { user, logout } = useSupabaseAuth()
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // 防止hydration不匹配
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light")
@@ -55,6 +62,7 @@ export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 transition-all duration-300">
       <div className="container flex h-16 items-center justify-between px-4">
         <button
+          type="button"
           onClick={() => onNavigate("browse")}
           className="flex items-center gap-3 hover:opacity-80 transition-all duration-300 hover:scale-105 group"
         >
@@ -87,7 +95,10 @@ export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
             onClick={toggleTheme}
             className="h-10 w-10 rounded-full hover:bg-gradient-to-r hover:from-orange-100 hover:to-pink-100 dark:hover:from-orange-900/20 dark:hover:to-pink-900/20 transition-all duration-300 hover:scale-110"
           >
-            {theme === "light" ? (
+            {!mounted ? (
+              // 在hydration完成前显示默认图标，避免不匹配
+              <Sun className="h-5 w-5 text-yellow-500" />
+            ) : theme === "light" ? (
               <Moon className="h-5 w-5 text-orange-600" />
             ) : (
               <Sun className="h-5 w-5 text-yellow-500" />

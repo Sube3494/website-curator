@@ -1,6 +1,6 @@
 "use client"
 
-import { Component, ReactNode } from "react"
+import { Component, ReactNode, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertTriangle, RefreshCw } from "lucide-react"
@@ -15,6 +15,39 @@ interface ErrorBoundaryProps {
   fallback?: ReactNode
 }
 
+// 全局错误处理器
+export function GlobalErrorHandler() {
+  useEffect(() => {
+    // 捕获未处理的Promise拒绝
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('未处理的Promise拒绝:', event.reason)
+      // 防止默认的错误处理
+      event.preventDefault()
+    }
+
+    // 捕获全局JavaScript错误
+    const handleError = (event: ErrorEvent) => {
+      console.error('全局错误:', event.error)
+      // 如果是React错误#418，提供更友好的处理
+      if (event.error?.message?.includes('Minified React error #418')) {
+        console.warn('检测到React hydration错误，这通常是由于客户端和服务端渲染不一致引起的')
+      }
+    }
+
+    // 添加事件监听器
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+    window.addEventListener('error', handleError)
+
+    // 清理函数
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+      window.removeEventListener('error', handleError)
+    }
+  }, [])
+
+  return null
+}
+
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props)
@@ -27,6 +60,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
+
+    // 特殊处理React错误#418
+    if (error.message?.includes('Minified React error #418')) {
+      console.warn('React hydration错误详情:', {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack
+      })
+    }
   }
 
   render() {
