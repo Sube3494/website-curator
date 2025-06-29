@@ -326,6 +326,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
                     alt={`${website.title} icon`}
                     className="w-7 h-7 object-contain"
                     fallback={<span className="text-xl">🌐</span>}
+                    isFavicon={true}
                   />
                 ) : (
                   <span className="text-xl">🌐</span>
@@ -444,6 +445,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
                     alt={`${website.title} icon`}
                     className="w-7 h-7 object-contain"
                     fallback={<span className="text-xl">🌐</span>}
+                    isFavicon={true}
                   />
                 ) : (
                   <span className="text-xl">🌐</span>

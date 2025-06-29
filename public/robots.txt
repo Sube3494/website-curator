@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# 允许搜索引擎索引公开页面
+Allow: /
+Allow: /browse
+Allow: /favorites
+
+# 禁止索引管理员和认证页面
+Disallow: /admin/
+Disallow: /auth/
+
+# 网站地图
+Sitemap: https://your-domain.com/sitemap.xml

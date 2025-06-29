@@ -2,7 +2,7 @@
  * @Date: 2025-06-28 16:38:54
  * @Author: Sube
  * @FilePath: layout.tsx
- * @LastEditTime: 2025-06-29 13:39:14
+ * @LastEditTime: 2025-06-30 00:30:04
  * @Description: 
  */
 import type React from "react"
@@ -16,7 +16,16 @@ export const metadata: Metadata = {
   title: "网站导航 - 发现和整理优秀网站",
   description:
     "一个全面的网站导航平台，用于收集、整理和发现优秀网站，具备用户认证和管理功能。",
-  generator: 'v0.dev'
+  generator: 'v0.dev',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+    ],
+    apple: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }
+    ]
+  },
+  manifest: '/manifest.json'
 }
 
 export default function RootLayout({
