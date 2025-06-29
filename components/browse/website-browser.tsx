@@ -721,7 +721,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
               登录
             </Button>
             <Button variant="outline" onClick={() => handleLoginDialogClose(false)}>
-              Continue Browsing
+              继续浏览
             </Button>
           </div>
         </DialogContent>
