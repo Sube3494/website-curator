@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useSupabaseAuth } from "@/lib/supabase-auth-context"
 import { useSystemSettings } from "@/lib/system-settings-context"
 import { useApprovedWebsites, useCategories } from "@/lib/hooks/use-websites"
@@ -622,7 +629,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
         </div>
 
         {/* 主内容区域 - 响应式布局 */}
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-0 lg:gap-6">
           {/* 侧边栏 */}
           <div className={cn(
             "lg:sticky lg:top-20 lg:self-start transition-all duration-300",
@@ -648,6 +655,30 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
 
           {/* 主内容 */}
           <main className="flex-1 min-w-0 transition-all duration-300">
+            {/* 移动端分类选择器 */}
+            <div className="lg:hidden mb-2">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择分类" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => {
+                    const colorInfo = getCategoryColor(category)
+                    return (
+                      <SelectItem key={category} value={category}>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium">{category}</span>
+                          <Badge variant="secondary" className="ml-2">
+                            {getCategoryCount(category)}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
             {websitesLoading ? (
               <WebsiteGridSkeleton count={6} />
             ) : filteredWebsites.length === 0 ? (

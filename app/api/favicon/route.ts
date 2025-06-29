@@ -1,3 +1,10 @@
+/*
+ * @Date: 2025-06-30 02:04:21
+ * @Author: Sube
+ * @FilePath: route.ts
+ * @LastEditTime: 2025-06-30 02:06:35
+ * @Description: 
+ */
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
