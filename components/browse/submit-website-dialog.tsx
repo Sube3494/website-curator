@@ -152,7 +152,7 @@ export function SubmitWebsiteDialog({ open, onOpenChange }: SubmitWebsiteDialogP
             if (isSubmitting && !isOpen) return
             onOpenChange(isOpen)
         }}>
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[85vh] overflow-y-auto rounded-xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                         提交新网站
