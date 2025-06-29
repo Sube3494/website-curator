@@ -2,7 +2,7 @@
  * @Date: 2025-06-29 21:10:07
  * @Author: Sube
  * @FilePath: CHANGELOG.md
- * @LastEditTime: 2025-06-30 04:15:26
+ * @LastEditTime: 2025-06-30 04:57:15
  * @Description: 
 -->
 # 更新日志
@@ -20,7 +20,7 @@
 - API 接口文档
 - 移动端 PWA 支持
 
-## [1.2.0] - 2025-01-29
+## [1.1.1] - 2025-06-30
 
 ### 新增
 - 🛡️ **全局错误处理器**: 新增GlobalErrorHandler组件，捕获React hydration错误和未处理的Promise拒绝
@@ -34,7 +34,12 @@
   - 修复主题切换按钮在服务端和客户端渲染不一致的问题
   - 修复Toaster组件的主题hydration不匹配
   - 修复useIsMobile钩子在hydration时的状态不一致
-- 🎯 **UI组件修复**:
+- �️ **SSR构建错误修复**:
+  - 修复NetworkMonitor组件在SSR时访问navigator对象的问题
+  - 修复sidebar组件在SSR时访问document.cookie的问题
+  - 修复theme-context在SSR时访问localStorage和document的问题
+  - 解决构建时'navigator is not defined'错误
+- �🎯 **UI组件修复**:
   - 修复button元素缺少type属性的问题
   - 优化管理后台标签页在移动端的水平滚动显示
 
@@ -65,6 +70,7 @@
 - 🎨 **UI一致性**: 统一标签页样式、间距和交互效果
 - 🔒 **错误处理**: 全面的错误捕获和恢复机制
 - ⚡ **缓存策略**: 智能的favicon缓存和网络请求优化
+- 🏗️ **SSR兼容性**: 修复服务端渲染时的浏览器API访问问题，确保构建成功
 
 ## [1.1.0] - 2025-06-30
 
