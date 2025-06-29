@@ -13,7 +13,12 @@ export function useFavorites(userId: string | null) {
     queryKey: favoriteKeys.user(userId || ''),
     queryFn: () => {
       if (!userId) return []
-      return db.getFavorites(userId)
+      try {
+        return db.getFavorites(userId)
+      } catch (error) {
+        console.error('获取收藏失败:', error)
+        throw error
+      }
     },
     enabled: !!userId, // 只有在用户登录时才执行查询
     staleTime: 5 * 60 * 1000, // 5 分钟（增加缓存时间，因为我们有乐观更新）
@@ -24,7 +29,7 @@ export function useFavorites(userId: string | null) {
   })
 }
 
-// 添加收藏 - 简化版本，本地状态提供即时反馈
+// 添加收藏 - 使用乐观更新
 export function useAddFavorite(userId: string | null) {
   const queryClient = useQueryClient()
 
@@ -33,19 +38,37 @@ export function useAddFavorite(userId: string | null) {
       if (!userId) throw new Error('User not logged in')
       return await db.addFavorite(userId, website.id)
     },
-    onSuccess: () => {
+    onMutate: async (website: Website) => {
       if (!userId) return
-      // 成功后同步服务器数据
-      queryClient.invalidateQueries({
-        queryKey: favoriteKeys.user(userId)
-      })
+
+      // 取消正在进行的查询
+      await queryClient.cancelQueries({ queryKey: favoriteKeys.user(userId) })
+
+      // 获取当前数据
+      const previousFavorites = queryClient.getQueryData<Website[]>(favoriteKeys.user(userId)) || []
+
+      // 乐观更新
+      queryClient.setQueryData<Website[]>(favoriteKeys.user(userId), [...previousFavorites, website])
+
+      // 返回回滚数据
+      return { previousFavorites }
     },
-    retry: 1,
-    retryDelay: 300,
+    onError: (err, website, context) => {
+      if (!userId || !context) return
+      // 回滚到之前的状态
+      queryClient.setQueryData(favoriteKeys.user(userId), context.previousFavorites)
+    },
+    onSettled: () => {
+      if (!userId) return
+      // 重新获取数据确保同步
+      queryClient.invalidateQueries({ queryKey: favoriteKeys.user(userId) })
+    },
+    retry: 2,
+    retryDelay: 500,
   })
 }
 
-// 移除收藏 - 简化版本，本地状态提供即时反馈
+// 移除收藏 - 使用乐观更新
 export function useRemoveFavorite(userId: string | null) {
   const queryClient = useQueryClient()
 
@@ -54,15 +77,34 @@ export function useRemoveFavorite(userId: string | null) {
       if (!userId) throw new Error('User not logged in')
       return await db.removeFavorite(userId, websiteId)
     },
-    onSuccess: () => {
+    onMutate: async (websiteId: string) => {
       if (!userId) return
-      // 成功后同步服务器数据
-      queryClient.invalidateQueries({
-        queryKey: favoriteKeys.user(userId)
-      })
+
+      // 取消正在进行的查询
+      await queryClient.cancelQueries({ queryKey: favoriteKeys.user(userId) })
+
+      // 获取当前数据
+      const previousFavorites = queryClient.getQueryData<Website[]>(favoriteKeys.user(userId)) || []
+
+      // 乐观更新 - 移除指定网站
+      const updatedFavorites = previousFavorites.filter(fav => fav.id !== websiteId)
+      queryClient.setQueryData<Website[]>(favoriteKeys.user(userId), updatedFavorites)
+
+      // 返回回滚数据
+      return { previousFavorites }
     },
-    retry: 1,
-    retryDelay: 300,
+    onError: (err, websiteId, context) => {
+      if (!userId || !context) return
+      // 回滚到之前的状态
+      queryClient.setQueryData(favoriteKeys.user(userId), context.previousFavorites)
+    },
+    onSettled: () => {
+      if (!userId) return
+      // 重新获取数据确保同步
+      queryClient.invalidateQueries({ queryKey: favoriteKeys.user(userId) })
+    },
+    retry: 2,
+    retryDelay: 500,
   })
 }
 

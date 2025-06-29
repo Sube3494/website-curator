@@ -45,39 +45,24 @@ export function FavoritesPage() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 
-  // 本地收藏状态 - 提供即时UI反馈
-  const [localFavorites, setLocalFavorites] = useState<SupabaseWebsite[]>(favorites)
-
   // 合并分类数据
   const categories = useMemo(() => ["All", ...dbCategories.map(cat => cat.name)], [dbCategories])
 
-  // 同步服务器状态到本地状态
-  useEffect(() => {
-    setLocalFavorites(favorites)
-  }, [favorites])
-
   const handleRemoveFavorite = useCallback((websiteId: string, websiteTitle?: string) => {
-    // 立即更新本地状态 - 真正的即时反馈
-    const removedWebsite = localFavorites.find(w => w.id === websiteId)
-    setLocalFavorites(prev => prev.filter(w => w.id !== websiteId))
-
-    // 后台同步服务器
+    // 使用乐观更新移除收藏
     removeFavoriteMutation.mutate(websiteId, {
-      onError: () => {
-        // 错误时回滚本地状态
-        if (removedWebsite) {
-          setLocalFavorites(prev => [...prev, removedWebsite])
-        }
+      onError: (error) => {
+        console.error('移除收藏失败:', error)
         toast.error("移除收藏失败，请重试")
       },
       onSuccess: () => {
         toast.success(`已从收藏中移除 ${websiteTitle || '网站'}`)
       }
     })
-  }, [removeFavoriteMutation, localFavorites])
+  }, [removeFavoriteMutation])
 
   const filteredFavorites = useMemo(() => {
-    return localFavorites.filter((website) => {
+    return favorites.filter((website) => {
       const matchesSearch =
         website.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         website.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,11 +73,11 @@ export function FavoritesPage() {
 
       return matchesSearch && matchesCategory
     })
-  }, [localFavorites, searchQuery, selectedCategory])
+  }, [favorites, searchQuery, selectedCategory])
 
   const getCategoryCount = (category: string) => {
-    if (category === "All") return localFavorites.length
-    return localFavorites.filter((site) => site.category?.name === category).length
+    if (category === "All") return favorites.length
+    return favorites.filter((site) => site.category?.name === category).length
   }
 
   // 获取分类颜色
@@ -216,8 +201,8 @@ export function FavoritesPage() {
               setIsCollapsed={setIsCollapsed}
               viewMode={viewMode}
               setViewMode={setViewMode}
-              realTimeFavoritesCount={localFavorites.length}
-              websitesTotal={localFavorites.length}
+              realTimeFavoritesCount={favorites.length}
+              websitesTotal={favorites.length}
               className="hidden lg:flex h-[calc(100vh-180px)]"
             />
           </div>

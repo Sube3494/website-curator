@@ -59,20 +59,20 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [pendingFavoriteWebsite, setPendingFavoriteWebsite] = useState<Website | null>(null)
+  // 添加本地收藏状态，用于即时UI反馈
+  const [localFavorites, setLocalFavorites] = useState<Set<string>>(new Set())
 
   // 标签过滤
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<Array<{ id: string, name: string, count: number }>>([])
 
-  // 本地收藏状态 - 提供即时UI反馈
-  const [localFavorites, setLocalFavorites] = useState<Set<string>>(new Set())
+  // 使用服务器状态作为收藏状态的唯一来源
+  const favoriteIds = useMemo(() => new Set(favorites.map(fav => fav.id)), [favorites])
 
-  // 初始化本地收藏状态
+  // 同步服务器收藏状态到本地状态
   useEffect(() => {
-    if (favorites.length > 0) {
-      setLocalFavorites(new Set(favorites.map(fav => fav.id)))
-    }
-  }, [favorites])
+    setLocalFavorites(new Set(favoriteIds))
+  }, [favoriteIds])
 
   // 搜索防抖
   useEffect(() => {
@@ -208,16 +208,16 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
     return approvedWebsites.filter((site) => site.category?.name === category).length
   }
 
-  // 检查是否已收藏的辅助函数 - 使用本地状态提供即时反馈
+  // 检查是否已收藏的辅助函数
   const isFavorited = useCallback((websiteId: string) => {
-    return localFavorites.has(websiteId)
-  }, [localFavorites])
+    return favoriteIds.has(websiteId) || localFavorites.has(websiteId)
+  }, [favoriteIds, localFavorites])
 
-  // 收藏总数 - 使用本地状态
-  const realTimeFavoritesCount = localFavorites.size
+  // 收藏总数
+  const realTimeFavoritesCount = favorites.length
 
   const handleFavoriteClick = useCallback(
-    (website: Website, event: React.MouseEvent) => {
+    async (website: Website, event: React.MouseEvent) => {
       // Prevent event bubbling and default behavior
       event.preventDefault()
       event.stopPropagation()
@@ -229,6 +229,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
       }
 
       const isCurrentlyFavorited = isFavorited(website.id)
+      console.log('收藏状态:', isCurrentlyFavorited, '网站ID:', website.id, '用户ID:', user.id)
 
       // 立即更新本地状态 - 真正的即时反馈
       if (isCurrentlyFavorited) {
@@ -239,34 +240,32 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
         })
 
         // 后台同步服务器
-        removeFavoriteMutation.mutate(website.id, {
-          onError: () => {
-            // 错误时回滚本地状态
-            setLocalFavorites(prev => new Set(prev).add(website.id))
-            toast.error("移除收藏失败，请重试")
-          },
-          onSuccess: () => {
-            toast.success(`已从收藏中移除 ${website.title}`)
-          }
-        })
+        try {
+          await removeFavoriteMutation.mutateAsync(website.id)
+          toast.success(`已从收藏中移除 ${website.title}`)
+        } catch (error) {
+          // 错误时回滚本地状态
+          setLocalFavorites(prev => new Set(prev).add(website.id))
+          console.error('移除收藏错误:', error)
+          toast.error("移除收藏失败，请重试")
+        }
       } else {
         setLocalFavorites(prev => new Set(prev).add(website.id))
 
         // 后台同步服务器
-        addFavoriteMutation.mutate(website, {
-          onError: () => {
-            // 错误时回滚本地状态
-            setLocalFavorites(prev => {
-              const newSet = new Set(prev)
-              newSet.delete(website.id)
-              return newSet
-            })
-            toast.error("添加收藏失败，请重试")
-          },
-          onSuccess: () => {
-            toast.success(`已收藏 ${website.title}`)
-          }
-        })
+        try {
+          await addFavoriteMutation.mutateAsync(website)
+          toast.success(`已收藏 ${website.title}`)
+        } catch (error) {
+          // 错误时回滚本地状态
+          setLocalFavorites(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(website.id)
+            return newSet
+          })
+          console.error('添加收藏错误:', error)
+          toast.error("添加收藏失败，请重试")
+        }
       }
     },
     [user, isFavorited, addFavoriteMutation, removeFavoriteMutation],
