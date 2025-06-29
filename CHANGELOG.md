@@ -2,7 +2,7 @@
  * @Date: 2025-06-29 21:10:07
  * @Author: Sube
  * @FilePath: CHANGELOG.md
- * @LastEditTime: 2025-06-30 04:11:15
+ * @LastEditTime: 2025-06-30 04:15:26
  * @Description: 
 -->
 # 更新日志
@@ -20,7 +20,7 @@
 - API 接口文档
 - 移动端 PWA 支持
 
-## [1.1.0] - 2025-06-29
+## [1.1.0] - 2025-06-30
 
 ### 新增
 - 🖼️ 动态favicon API服务，自动获取网站图标
