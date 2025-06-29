@@ -23,7 +23,11 @@ export function useFavorites(userId: string | null) {
     enabled: !!userId, // 只有在用户登录时才执行查询
     staleTime: 5 * 60 * 1000, // 5 分钟（增加缓存时间，因为我们有乐观更新）
     gcTime: 10 * 60 * 1000, // 10 分钟
-    select: (data) => data.map(fav => fav.website).filter(Boolean) as Website[], // 只返回网站数据
+    select: (data) => {
+      // 安全处理：确保 data 存在且是数组
+      if (!data || !Array.isArray(data)) return []
+      return data.map(fav => fav.website).filter(Boolean) as Website[]
+    },
     refetchOnWindowFocus: false, // 禁用窗口焦点时重新获取，减少不必要的请求
     refetchOnReconnect: true, // 网络重连时重新获取，确保数据同步
   })

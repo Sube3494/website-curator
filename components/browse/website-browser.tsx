@@ -67,7 +67,10 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   const [availableTags, setAvailableTags] = useState<Array<{ id: string, name: string, count: number }>>([])
 
   // 使用服务器状态作为收藏状态的唯一来源
-  const favoriteIds = useMemo(() => new Set(favorites.map(fav => fav.id)), [favorites])
+  const favoriteIds = useMemo(() => {
+    if (!favorites || !Array.isArray(favorites)) return new Set<string>()
+    return new Set(favorites.map(fav => fav.id))
+  }, [favorites])
 
   // 同步服务器收藏状态到本地状态
   useEffect(() => {
@@ -214,7 +217,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   }, [favoriteIds, localFavorites])
 
   // 收藏总数
-  const realTimeFavoritesCount = favorites.length
+  const realTimeFavoritesCount = favorites?.length || 0
 
   const handleFavoriteClick = useCallback(
     async (website: Website, event: React.MouseEvent) => {
