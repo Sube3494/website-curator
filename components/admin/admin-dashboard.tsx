@@ -1020,7 +1020,7 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50/50 via-pink-50/30 to-orange-50/50 dark:from-gray-900 dark:via-purple-900/10 dark:to-pink-900/10 pb-16">
-      <div className="container px-4 py-6">
+      <div className="container px-2 sm:px-4 py-4 sm:py-6">
         {/* 标题部分 - 居中 */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 via-rose-600 via-orange-600 to-purple-600 bg-clip-text text-transparent animate-wave-gradient mb-2">
@@ -1033,7 +1033,7 @@ export function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-8">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-8">
           {[
             { title: "网站总数", value: stats.totalWebsites, icon: Globe, color: "from-blue-500 to-cyan-500" },
             {
@@ -1071,34 +1071,34 @@ export function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="websites" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <TabsList className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-lg p-1 text-lg">
+          <div className="flex items-center justify-center overflow-x-auto scrollbar-hide pb-2">
+            <TabsList className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-lg p-1.5 text-base sm:text-lg lg:text-xl flex sm:grid sm:grid-cols-4 w-full sm:max-w-4xl gap-1 min-w-max sm:min-w-0 mx-2 sm:mx-0">
               <TabsTrigger
                 value="websites"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-50 data-[state=active]:to-pink-50 dark:data-[state=active]:from-purple-900/20 dark:data-[state=active]:to-pink-900/20 dark:data-[state=active]:text-white px-6 py-3 text-base"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-50 data-[state=active]:to-pink-50 dark:data-[state=active]:from-purple-900/20 dark:data-[state=active]:to-pink-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg flex flex-row items-center gap-1 font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
-                网站
+                <span>网站</span>
                 {stats.pendingWebsites > 0 && (
-                  <span className="ml-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs rounded-full px-2 py-0.5">
+                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.5rem] text-center">
                     {stats.pendingWebsites}
                   </span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="categories"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-50 data-[state=active]:to-orange-50 dark:data-[state=active]:from-amber-900/20 dark:data-[state=active]:to-orange-900/20 dark:data-[state=active]:text-white px-6 py-3 text-base"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-50 data-[state=active]:to-orange-50 dark:data-[state=active]:from-amber-900/20 dark:data-[state=active]:to-orange-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
                 分类
               </TabsTrigger>
               <TabsTrigger
                 value="users"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-50 data-[state=active]:to-purple-50 dark:data-[state=active]:from-indigo-900/20 dark:data-[state=active]:to-purple-900/20 dark:data-[state=active]:text-white px-6 py-3 text-base"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-50 data-[state=active]:to-purple-50 dark:data-[state=active]:from-indigo-900/20 dark:data-[state=active]:to-purple-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
                 用户
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-50 data-[state=active]:to-teal-50 dark:data-[state=active]:from-green-900/20 dark:data-[state=active]:to-teal-900/20 dark:data-[state=active]:text-white px-6 py-3 text-base"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-50 data-[state=active]:to-teal-50 dark:data-[state=active]:from-green-900/20 dark:data-[state=active]:to-teal-900/20 dark:data-[state=active]:text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 text-sm sm:text-base lg:text-lg font-medium rounded-lg whitespace-nowrap flex-shrink-0"
               >
                 系统设置
               </TabsTrigger>
@@ -1108,20 +1108,22 @@ export function AdminDashboard() {
           <TabsContent value="websites" className="space-y-6">
             <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="space-y-2">
-                    <CardTitle className="flex items-center gap-2">
-                      <Globe className="h-5 w-5 text-purple-600" />
-                      网站管理
+                    <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-purple-600" />
+                        网站管理
+                      </div>
                       {stats.pendingWebsites > 0 && (
-                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white ml-2">
+                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white w-fit">
                           {stats.pendingWebsites} 待审核
                         </Badge>
                       )}
                     </CardTitle>
                     <CardDescription>管理系统中的所有网站数据</CardDescription>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                     {selectedWebsites.size > 0 && (
                       <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
                         <AlertDialogTrigger asChild>
@@ -1137,7 +1139,7 @@ export function AdminDashboard() {
                             批量删除 ({selectedWebsites.size})
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 bg-white dark:bg-gray-800 border shadow-lg rounded-lg">
+                        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg rounded-xl">
                           <AlertDialogHeader>
                             <AlertDialogTitle>批量删除网站</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -1164,7 +1166,7 @@ export function AdminDashboard() {
                         </Button>
                       </DialogTrigger>
                       <DialogContent
-                        className="sm:max-w-[425px] fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 bg-white dark:bg-gray-800 border shadow-lg rounded-lg max-h-[90vh] overflow-y-auto"
+                        className="max-w-[95vw] sm:max-w-[425px] max-h-[85vh] overflow-y-auto rounded-xl"
                         onPointerDownOutside={(e) => e.preventDefault()}
                       >
                         <DialogHeader>
@@ -1273,7 +1275,7 @@ export function AdminDashboard() {
                       </DialogContent>
                     </Dialog>
 
-                    <div className="relative w-64">
+                    <div className="relative w-full sm:w-64">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
                       <Input
                         placeholder="搜索网站..."
@@ -1300,7 +1302,7 @@ export function AdminDashboard() {
                       )}
                     </div>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-32 transition-all duration-200 focus:ring-2 focus:ring-purple-500">
+                      <SelectTrigger className="w-full sm:w-32 transition-all duration-200 focus:ring-2 focus:ring-purple-500">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1314,8 +1316,8 @@ export function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg border bg-white/50 dark:bg-gray-800/50 backdrop-blur">
-                  <Table>
+                <div className="rounded-lg border bg-white/50 dark:bg-gray-800/50 backdrop-blur overflow-x-auto">
+                  <Table className="min-w-[800px]">
                     <TableHeader>
                       <TableRow className="border-b border-gray-200 dark:border-gray-700">
                         <TableHead className="w-10">
@@ -1467,7 +1469,7 @@ export function AdminDashboard() {
                                       </Button>
                                     </DialogTrigger>
                                     <DialogContent
-                                      className="sm:max-w-[500px] fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 bg-white dark:bg-gray-800 border shadow-lg rounded-lg"
+                                      className="max-w-[95vw] sm:max-w-[500px] max-h-[85vh] overflow-y-auto rounded-xl"
                                       onPointerDownOutside={(e) => e.preventDefault()}
                                     >
                                       <DialogHeader>
@@ -1544,7 +1546,7 @@ export function AdminDashboard() {
                                         <Trash2 className="h-3 w-3" />
                                       </Button>
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 bg-white dark:bg-gray-800 border shadow-lg rounded-lg">
+                                    <AlertDialogContent className="max-w-[95vw] sm:max-w-lg rounded-xl">
                                       <AlertDialogHeader>
                                         <AlertDialogTitle>删除网站</AlertDialogTitle>
                                         <AlertDialogDescription>
@@ -1643,7 +1645,7 @@ export function AdminDashboard() {
           <TabsContent value="categories" className="space-y-6">
             <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="space-y-2">
                     <CardTitle className="flex items-center gap-2">
                       <Palette className="h-5 w-5 text-orange-600" />
@@ -1651,14 +1653,14 @@ export function AdminDashboard() {
                     </CardTitle>
                     <CardDescription>管理网站分类及其颜色</CardDescription>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                    <div className="relative w-full sm:w-64">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
                       <Input
                         placeholder="搜索分类..."
                         value={categorySearchQuery}
                         onChange={(e) => setCategorySearchQuery(e.target.value)}
-                        className="pl-10 pr-20 w-64 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-0 shadow-lg transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:shadow-xl"
+                        className="pl-10 pr-20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-0 shadow-lg transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:shadow-xl"
                       />
                       {categorySearchQuery && (
                         <Button
@@ -1693,7 +1695,7 @@ export function AdminDashboard() {
                             批量删除 ({selectedCategories.size})
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 bg-white dark:bg-gray-800 border shadow-lg rounded-lg">
+                        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg rounded-xl">
                           <AlertDialogHeader>
                             <AlertDialogTitle>批量删除分类</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -1727,7 +1729,7 @@ export function AdminDashboard() {
                           添加分类
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden">
+                      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[85vh] overflow-hidden rounded-xl">
                         <DialogHeader>
                           <DialogTitle>添加新分类</DialogTitle>
                           <DialogDescription>
@@ -1876,8 +1878,8 @@ export function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="rounded-lg border bg-white/50 dark:bg-gray-800/50 backdrop-blur">
-                    <Table>
+                  <div className="rounded-lg border bg-white/50 dark:bg-gray-800/50 backdrop-blur overflow-x-auto">
+                    <Table className="min-w-[600px]">
                       <TableHeader>
                         <TableRow className="border-b border-gray-200 dark:border-gray-700">
                           <TableHead className="w-10">
@@ -2021,7 +2023,7 @@ export function AdminDashboard() {
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
                                       </AlertDialogTrigger>
-                                      <AlertDialogContent>
+                                      <AlertDialogContent className="max-w-[95vw] sm:max-w-lg rounded-xl">
                                         <AlertDialogHeader>
                                           <AlertDialogTitle>删除分类</AlertDialogTitle>
                                           <AlertDialogDescription>
@@ -2120,7 +2122,7 @@ export function AdminDashboard() {
 
             {/* 编辑分类对话框 */}
             <Dialog open={isEditCategoryDialogOpen} onOpenChange={handleEditCategoryDialogClose}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto rounded-xl">
                 <DialogHeader>
                   <DialogTitle>编辑分类</DialogTitle>
                   <DialogDescription>
@@ -2271,7 +2273,7 @@ export function AdminDashboard() {
           <TabsContent value="users" className="space-y-6">
             <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="space-y-2">
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5 text-indigo-600" />
@@ -2279,8 +2281,8 @@ export function AdminDashboard() {
                     </CardTitle>
                     <CardDescription>管理用户账户和权限</CardDescription>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="relative w-64">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                    <div className="relative w-full sm:w-64">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
                       <Input
                         placeholder="搜索用户..."
@@ -2321,7 +2323,7 @@ export function AdminDashboard() {
                             批量禁用 ({selectedUsers.size})
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 bg-white dark:bg-gray-800 border shadow-lg rounded-lg">
+                        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg rounded-xl">
                           <AlertDialogHeader>
                             <AlertDialogTitle>批量禁用用户</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -2354,8 +2356,8 @@ export function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg border bg-white/50 dark:bg-gray-800/50 backdrop-blur">
-                  <Table>
+                <div className="rounded-lg border bg-white/50 dark:bg-gray-800/50 backdrop-blur overflow-x-auto">
+                  <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow className="border-b border-gray-200 dark:border-gray-700">
                         <TableHead className="w-10">
@@ -2617,7 +2619,7 @@ export function AdminDashboard() {
       {/* Edit Website Dialog - Fixed positioning and behavior */}
       <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogClose}>
         <DialogContent
-          className="sm:max-w-[425px] fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 bg-white dark:bg-gray-800 border shadow-lg rounded-lg max-h-[90vh] overflow-y-auto"
+          className="max-w-[95vw] sm:max-w-[425px] max-h-[85vh] overflow-y-auto rounded-xl"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => {
             e.preventDefault()
