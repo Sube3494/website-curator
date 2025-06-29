@@ -2,7 +2,7 @@
  * @Date: 2025-06-28 16:38:54
  * @Author: Sube
  * @FilePath: layout.tsx
- * @LastEditTime: 2025-06-30 00:30:04
+ * @LastEditTime: 2025-06-30 00:34:27
  * @Description: 
  */
 import type React from "react"
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
       { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
     ],
     apple: [
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/svg+xml' }
     ]
   },
   manifest: '/manifest.json'
