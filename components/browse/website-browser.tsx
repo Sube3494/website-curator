@@ -59,8 +59,6 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [pendingFavoriteWebsite, setPendingFavoriteWebsite] = useState<Website | null>(null)
-  // 添加本地收藏状态，用于即时UI反馈
-  const [localFavorites, setLocalFavorites] = useState<Set<string>>(new Set())
 
   // 标签过滤
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -71,11 +69,6 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
     if (!favorites || !Array.isArray(favorites)) return new Set<string>()
     return new Set(favorites.map(fav => fav.id))
   }, [favorites])
-
-  // 同步服务器收藏状态到本地状态
-  useEffect(() => {
-    setLocalFavorites(new Set(favoriteIds))
-  }, [favoriteIds])
 
   // 搜索防抖
   useEffect(() => {
@@ -213,8 +206,8 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
 
   // 检查是否已收藏的辅助函数
   const isFavorited = useCallback((websiteId: string) => {
-    return favoriteIds.has(websiteId) || localFavorites.has(websiteId)
-  }, [favoriteIds, localFavorites])
+    return favoriteIds.has(websiteId)
+  }, [favoriteIds])
 
   // 收藏总数
   const realTimeFavoritesCount = favorites?.length || 0
@@ -232,43 +225,29 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
       }
 
       const isCurrentlyFavorited = isFavorited(website.id)
-      console.log('收藏状态:', isCurrentlyFavorited, '网站ID:', website.id, '用户ID:', user.id)
 
-      // 立即更新本地状态 - 真正的即时反馈
       if (isCurrentlyFavorited) {
-        setLocalFavorites(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(website.id)
-          return newSet
+        // 移除收藏
+        removeFavoriteMutation.mutate(website.id, {
+          onError: (error) => {
+            console.error('移除收藏失败:', error)
+            toast.error("移除收藏失败，请重试")
+          },
+          onSuccess: () => {
+            toast.success(`已从收藏中移除 ${website.title}`)
+          }
         })
-
-        // 后台同步服务器
-        try {
-          await removeFavoriteMutation.mutateAsync(website.id)
-          toast.success(`已从收藏中移除 ${website.title}`)
-        } catch (error) {
-          // 错误时回滚本地状态
-          setLocalFavorites(prev => new Set(prev).add(website.id))
-          console.error('移除收藏错误:', error)
-          toast.error("移除收藏失败，请重试")
-        }
       } else {
-        setLocalFavorites(prev => new Set(prev).add(website.id))
-
-        // 后台同步服务器
-        try {
-          await addFavoriteMutation.mutateAsync(website)
-          toast.success(`已收藏 ${website.title}`)
-        } catch (error) {
-          // 错误时回滚本地状态
-          setLocalFavorites(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(website.id)
-            return newSet
-          })
-          console.error('添加收藏错误:', error)
-          toast.error("添加收藏失败，请重试")
-        }
+        // 添加收藏
+        addFavoriteMutation.mutate(website, {
+          onError: (error) => {
+            console.error('添加收藏失败:', error)
+            toast.error("添加收藏失败，请重试")
+          },
+          onSuccess: () => {
+            toast.success(`已收藏 ${website.title}`)
+          }
+        })
       }
     },
     [user, isFavorited, addFavoriteMutation, removeFavoriteMutation],
