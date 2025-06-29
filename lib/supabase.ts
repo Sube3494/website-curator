@@ -222,12 +222,12 @@ export const db = {
           .select('*')
           .eq('id', id)
           .single()
-          
+
         if (fetchError) {
           console.error('获取更新后的分类失败:', fetchError)
           throw new Error('分类不存在或更新失败')
         }
-        
+
         return updatedData as Category
       }
 
@@ -642,10 +642,20 @@ export const db = {
   },
 
   async updateSystemSetting(key: string, value: any) {
+    // 使用 upsert 操作：如果记录存在就更新，如果不存在就创建
     const { data, error } = await supabase
       .from('system_settings')
-      .update({ value, updated_at: new Date().toISOString() })
-      .eq('key', key)
+      .upsert(
+        {
+          key,
+          value,
+          updated_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'key',
+          ignoreDuplicates: false
+        }
+      )
       .select()
       .single()
 

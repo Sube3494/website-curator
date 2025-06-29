@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { useSupabaseAuth } from "@/lib/supabase-auth-context"
 import { useFavorites, useRemoveFavorite } from "@/lib/hooks/use-favorites"
+import { useCategories } from "@/lib/hooks/use-websites"
 import { toast } from "sonner"
 import { Sidebar } from "@/components/layout/sidebar"
 import { cn } from "@/lib/utils"
@@ -24,20 +25,20 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { Website as SupabaseWebsite } from "@/lib/supabase"
 
-const categories = ["All", "Development", "Design", "Content", "Resources", "Tools", "Learning"]
-
+// 默认颜色作为后备方案
 const categoryColors = {
-  Development: "from-emerald-500 to-teal-500",
-  Design: "from-pink-500 to-rose-500",
-  Content: "from-purple-500 to-indigo-500",
-  Resources: "from-orange-500 to-amber-500",
-  Tools: "from-cyan-500 to-blue-500",
-  Learning: "from-violet-500 to-purple-500",
+  "开发": "from-emerald-500 to-teal-500",
+  "设计": "from-pink-500 to-rose-500",
+  "内容": "from-purple-500 to-indigo-500",
+  "资源": "from-orange-500 to-amber-500",
+  "工具": "from-cyan-500 to-blue-500",
+  "学习": "from-violet-500 to-purple-500",
 }
 
 export function FavoritesPage() {
   const { user } = useSupabaseAuth()
   const { data: favorites = [], isLoading } = useFavorites(user?.id || null)
+  const { data: dbCategories = [] } = useCategories()
   const removeFavoriteMutation = useRemoveFavorite(user?.id || null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -46,6 +47,9 @@ export function FavoritesPage() {
 
   // 本地收藏状态 - 提供即时UI反馈
   const [localFavorites, setLocalFavorites] = useState<SupabaseWebsite[]>(favorites)
+
+  // 合并分类数据
+  const categories = useMemo(() => ["All", ...dbCategories.map(cat => cat.name)], [dbCategories])
 
   // 同步服务器状态到本地状态
   useEffect(() => {
@@ -100,7 +104,24 @@ export function FavoritesPage() {
       }
     }
 
-    // 使用预设颜色
+    // 从数据库分类中获取颜色
+    const dbCategory = dbCategories.find(cat => cat.name === categoryName)
+    if (dbCategory && dbCategory.color_from && dbCategory.color_to) {
+      // 如果是十六进制颜色，使用内联样式
+      if (dbCategory.color_from.startsWith('#') || dbCategory.color_to.startsWith('#')) {
+        return {
+          className: "",
+          style: { background: `linear-gradient(to right, ${dbCategory.color_from}, ${dbCategory.color_to})` }
+        }
+      }
+      // 如果是Tailwind类名，使用类名
+      return {
+        className: `from-${dbCategory.color_from} to-${dbCategory.color_to}`,
+        style: undefined
+      }
+    }
+
+    // 后备方案：使用默认颜色
     const defaultColor = categoryColors[categoryName as keyof typeof categoryColors] || "from-pink-500 to-rose-500"
     return {
       className: defaultColor,

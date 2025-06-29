@@ -10,15 +10,15 @@ import { toast } from "sonner"
 import { Upload, Settings, Save } from "lucide-react"
 
 export function SystemSettingsPage() {
-    const { settings, updateSettings, isLoading } = useSystemSettings()
-    const [allowUserSubmissions, setAllowUserSubmissions] = useState(settings.allowUserSubmissions)
+    const { settings, updateSetting, isLoading } = useSystemSettings()
+    const [allowUserSubmissions, setAllowUserSubmissions] = useState(settings.allow_website_submission)
     const [hasChanges, setHasChanges] = useState(false)
 
     // 当设置加载完成时，同步本地状态
     useEffect(() => {
-        setAllowUserSubmissions(settings.allowUserSubmissions)
+        setAllowUserSubmissions(settings.allow_website_submission)
         setHasChanges(false)
-    }, [settings.allowUserSubmissions])
+    }, [settings.allow_website_submission])
 
     // 处理开关变化
     const handleSwitchChange = (checked: boolean) => {
@@ -29,9 +29,7 @@ export function SystemSettingsPage() {
     // 保存设置
     const saveSettings = async () => {
         try {
-            await updateSettings({
-                allowUserSubmissions
-            })
+            await updateSetting('allow_website_submission', allowUserSubmissions)
             toast.success("系统设置已更新")
             setHasChanges(false)
         } catch (error) {
@@ -85,7 +83,7 @@ export function SystemSettingsPage() {
                             </div>
 
                             {/* 注释：系统默认对所有提交的网站进行审核，这是固定的设计，不作为可配置选项 */}
-                            
+
                             {/* 未来可以在这里添加更多设置项 */}
                         </div>
                     </div>
