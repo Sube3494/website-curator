@@ -619,7 +619,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
           {/* 提交网站按钮 */}
           {user ? (
             // 用户已登录，根据设置显示提交按钮或登录按钮
-            settings.allowUserSubmissions ? (
+            settings.allow_website_submission ? (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
