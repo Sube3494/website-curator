@@ -11,19 +11,27 @@ interface NetworkStatus {
 
 export function NetworkMonitor() {
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>({
-    isOnline: navigator.onLine
+    isOnline: true // 默认假设在线，避免SSR时访问navigator
   })
 
   useEffect(() => {
+    // 检查是否在浏览器环境
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return
+    }
+
     const updateNetworkStatus = () => {
       const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection
-      
+
       setNetworkStatus({
         isOnline: navigator.onLine,
         downlink: connection?.downlink,
         effectiveType: connection?.effectiveType
       })
     }
+
+    // 初始化网络状态
+    updateNetworkStatus()
 
     const handleOnline = () => {
       updateNetworkStatus()

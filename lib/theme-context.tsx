@@ -15,6 +15,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light")
 
   useEffect(() => {
+    // 检查是否在浏览器环境
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return
+    }
+
     const storedTheme = localStorage.getItem("theme") as Theme
     if (storedTheme) {
       setTheme(storedTheme)
@@ -24,6 +29,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    // 检查是否在浏览器环境
+    if (typeof document === 'undefined' || typeof localStorage === 'undefined') {
+      return
+    }
+
     document.documentElement.classList.toggle("dark", theme === "dark")
     localStorage.setItem("theme", theme)
   }, [theme])
