@@ -63,3 +63,6 @@ next-env.d.ts
 .temp
 .import
 .migration
+
+#memory bank
+memory_bank.md
