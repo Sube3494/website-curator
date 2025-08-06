@@ -20,7 +20,7 @@ import { useSystemSettings } from "@/lib/system-settings-context"
 import { useApprovedWebsites, useCategories } from "@/lib/hooks/use-websites"
 import { useFavorites, useAddFavorite, useRemoveFavorite } from "@/lib/hooks/use-favorites"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { LazyImage } from "@/components/ui/lazy-image"
+import { SimpleFavicon } from "@/components/ui/simple-favicon"
 import { WebsiteGridSkeleton } from "@/components/ui/website-card-skeleton"
 import { NoSearchResults, NoWebsites } from "@/components/ui/empty-state"
 import { NetworkError } from "@/components/ui/error-boundary"
@@ -308,17 +308,12 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
           <div className="flex p-4 h-full">
             <div className="shrink-0 flex items-start mr-4">
               <div className="w-10 h-10 p-1.5 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center shadow-sm">
-                {website.favicon ? (
-                  <LazyImage
-                    src={website.favicon}
-                    alt={`${website.title} icon`}
-                    className="w-7 h-7 object-contain"
-                    fallback={<span className="text-xl">🌐</span>}
-                    isFavicon={true}
-                  />
-                ) : (
-                  <span className="text-xl">🌐</span>
-                )}
+                <SimpleFavicon
+                  websiteUrl={website.url}
+                  alt={`${website.title} icon`}
+                  className="w-7 h-7 object-contain"
+                  fallback={<span className="text-xl">🌐</span>}
+                />
               </div>
             </div>
 
@@ -427,17 +422,12 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="w-10 h-10 p-1.5 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                {website.favicon ? (
-                  <LazyImage
-                    src={website.favicon}
-                    alt={`${website.title} icon`}
-                    className="w-7 h-7 object-contain"
-                    fallback={<span className="text-xl">🌐</span>}
-                    isFavicon={true}
-                  />
-                ) : (
-                  <span className="text-xl">🌐</span>
-                )}
+                <SimpleFavicon
+                  websiteUrl={website.url}
+                  alt={`${website.title} icon`}
+                  className="w-7 h-7 object-contain"
+                  fallback={<span className="text-xl">🌐</span>}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-base leading-tight group-hover:text-emerald-600 transition-colors duration-200 line-clamp-2">
@@ -568,6 +558,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
                 ? `浏览并收藏我们精心策展的网站集合`
                 : `浏览我们精心策展的优秀网站集合`}
           </p>
+
         </div>
 
         {/* 提交网站按钮和操作区 */}

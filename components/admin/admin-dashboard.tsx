@@ -48,6 +48,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { SimpleFavicon } from "@/components/ui/simple-favicon"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1478,21 +1479,12 @@ export function AdminDashboard() {
                               <TableCell>
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 p-1 rounded bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                                    {website.favicon ? (
-                                      <img
-                                        src={website.favicon || "/placeholder.svg"}
-                                        alt={`${website.title} icon`}
-                                        className="w-6 h-6 object-contain"
-                                        onError={(e) => {
-                                          const target = e.target as HTMLImageElement
-                                          target.style.display = "none"
-                                          const parent = target.parentElement!
-                                          parent.innerHTML = '<span class="text-lg">🌐</span>'
-                                        }}
-                                      />
-                                    ) : (
-                                      <span className="text-lg">🌐</span>
-                                    )}
+                                    <SimpleFavicon
+                                      websiteUrl={website.url}
+                                      alt={`${website.title} icon`}
+                                      className="w-6 h-6 object-contain"
+                                      fallback={<span className="text-lg">🌐</span>}
+                                    />
                                   </div>
                                   <div>
                                     <div className="font-medium">{website.title}</div>

@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { useFavorites, useRemoveFavorite } from "@/lib/hooks/use-favorites"
 import { useCategories } from "@/lib/hooks/use-websites"
+import { SimpleFavicon } from "@/components/ui/simple-favicon"
 import { toast } from "sonner"
 import { Sidebar } from "@/components/layout/sidebar"
 import { cn } from "@/lib/utils"
@@ -267,21 +268,12 @@ export function FavoritesPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className="w-10 h-10 p-1.5 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                            {website.favicon ? (
-                              <img
-                                src={website.favicon || "/placeholder.svg"}
-                                alt={`${website.title} icon`}
-                                className="w-7 h-7 object-contain"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement
-                                  target.style.display = "none"
-                                  const parent = target.parentElement!
-                                  parent.innerHTML = '<span class="text-xl">🌐</span>'
-                                }}
-                              />
-                            ) : (
-                              <span className="text-xl">🌐</span>
-                            )}
+                            <SimpleFavicon
+                              websiteUrl={website.url}
+                              alt={`${website.title} icon`}
+                              className="w-7 h-7 object-contain"
+                              fallback={<span className="text-xl">🌐</span>}
+                            />
                           </div>
                           <div className="min-w-0 flex-1">
                             <CardTitle className="text-base leading-tight group-hover:text-pink-600 transition-colors duration-200 line-clamp-2">

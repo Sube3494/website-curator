@@ -580,7 +580,7 @@ export class Database {
       // 先删除关联的标签和收藏
       await executeQuery('DELETE FROM website_tags WHERE website_id = ?', [id])
       await executeQuery('DELETE FROM favorites WHERE website_id = ?', [id])
-      
+
       // 删除网站
       await executeQuery('DELETE FROM websites WHERE id = ?', [id])
     } catch (error) {
@@ -588,6 +588,8 @@ export class Database {
       throw new DatabaseError('删除网站失败')
     }
   }
+
+
 
   // ============================================================================
   // 收藏相关操作
