@@ -122,14 +122,14 @@ export function LazyImage({
     try {
       const parsedUrl = new URL(url)
       return parsedUrl.hostname
-    } catch (e) {
+    } catch (_e) {
       try {
-        let domain = url
+        const domain = url
           .replace(/^(?:https?:\/\/)?(?:www\.)?/i, "")
           .split("/")[0]
           .split("?")[0]
         return domain
-      } catch (err) {
+      } catch (_err) {
         return url
       }
     }

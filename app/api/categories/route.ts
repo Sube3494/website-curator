@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     
     // 直接测试数据库连接
     try {
-      const { executeQuery } = require('@/lib/mysql')
+      const { executeQuery } = await import('@/lib/mysql')
       const directTestQuery = await executeQuery('SELECT * FROM categories LIMIT 1')
       console.log('直接查询分类测试:', directTestQuery)
     } catch (dbError) {

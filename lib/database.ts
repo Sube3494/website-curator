@@ -165,7 +165,7 @@ export class Database {
       await createUserSession(user.id, token)
       
       // 返回用户信息（不包含密码）
-      const { password_hash, ...userWithoutPassword } = user
+      const { password_hash: _password_hash, ...userWithoutPassword } = user
       
       return {
         success: true,
@@ -438,7 +438,7 @@ export class Database {
         if (websiteData.tags && websiteData.tags.length > 0) {
           for (const tagName of websiteData.tags) {
             // 检查标签是否存在
-            let [tagResults] = await connection.execute(
+            const [tagResults] = await connection.execute(
               'SELECT id FROM tags WHERE name = ?',
               [tagName.trim()]
             )

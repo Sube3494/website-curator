@@ -54,7 +54,7 @@ export function LoginForm({ onToggleMode, onAccountDisabled }: LoginFormProps) {
 
       // 登录失败，显示通用错误
       setError("邮箱或密码不正确。请重试。")
-    } catch (err) {
+    } catch (_err) {
       setError("登录失败。请稍后重试。")
     } finally {
       setIsLoading(false)

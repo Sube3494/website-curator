@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2, Globe, Sparkles, Star } from 'lucide-react'
+import { Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2, Globe, Sparkles, Star } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -82,14 +82,7 @@ export default function ForgotPasswordPage() {
     router.push('/?mode=register')
   }
 
-  const handleReset = () => {
-    setEmail('')
-    setError('')
-    setIsSuccess(false)
-    setShowRegisterPrompt(false)
-    setResendCountdown(0)
-    setCanResend(true)
-  }
+
 
   const handleResend = async () => {
     if (!canResend || resendCountdown > 0) return

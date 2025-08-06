@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 返回用户信息（不包含密码）
-    const { password_hash, ...userWithoutPassword } = newUser
+    const { password_hash: _password_hash, ...userWithoutPassword } = newUser
     
     return NextResponse.json({
       success: true,

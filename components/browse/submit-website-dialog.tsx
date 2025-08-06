@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, X, Tag } from "lucide-react"
+import { X, Tag } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -275,6 +275,7 @@ export function SubmitWebsiteDialog({ open, onOpenChange }: SubmitWebsiteDialogP
                                     <Badge key={tag} className="flex items-center gap-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                         {tag}
                                         <button
+                                            type="button"
                                             onClick={() => handleRemoveTag(tag)}
                                             className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/50 p-0.5"
                                             disabled={isSubmitting}

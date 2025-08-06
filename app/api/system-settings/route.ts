@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db, getCurrentUserFromToken } from '@/lib/database'
 import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 获取所有系统设置（任何认证用户都可以访问）
     const settings = await db.getAllSystemSettings()

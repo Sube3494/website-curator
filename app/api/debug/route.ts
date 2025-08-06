@@ -5,14 +5,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const websitesRaw = await db.getWebsites({})
     const categoriesRaw = await db.getCategories()
     const categoriesWithUsageRaw = await db.getCategoriesWithUsageCount()
-    
+
     // 直接查询数据库，跳过API格式化
-    const { pool, executeQuery } = require('@/lib/mysql')
+    const { executeQuery } = await import('@/lib/mysql')
     
     const websitesDirectQuery = await executeQuery('SELECT * FROM websites')
     const categoriesDirectQuery = await executeQuery('SELECT * FROM categories')
