@@ -2563,10 +2563,10 @@ export function AdminDashboard() {
                                 variant={targetUser.role === "super_admin" || targetUser.role === "admin" ? "default" : "secondary"}
                                 className={
                                   targetUser.role === "super_admin"
-                                    ? "bg-gradient-to-r from-yellow-500 to-orange-500 text-white"
+                                    ? "bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-medium"
                                     : targetUser.role === "admin"
-                                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                      : "bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600"
+                                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium"
+                                      : "bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-200 font-medium border border-blue-200 dark:border-blue-700"
                                 }
                               >
                                 {targetUser.role === "super_admin" ? "超级管理员" : targetUser.role === "admin" ? "管理员" : "用户"}
@@ -2575,8 +2575,8 @@ export function AdminDashboard() {
                             <TableCell className="text-center">
                               <Badge
                                 className={targetUser.trusted
-                                  ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-                                  : "bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600"
+                                  ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium"
+                                  : "bg-gradient-to-r from-slate-100 to-gray-100 text-slate-700 dark:from-slate-800/60 dark:to-gray-800/60 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-600"
                                 }
                               >
                                 {targetUser.trusted ? "可信用户" : "普通用户"}

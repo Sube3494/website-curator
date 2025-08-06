@@ -53,13 +53,18 @@ export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
         staleTime: 5 * 60 * 1000,
       })
 
-      // 预加载分类数据 - 通过API调用
+      // 预加载分类数据 - 通过API调用，带使用统计
       queryClient.prefetchQuery({
         queryKey: websiteKeys.categoriesWithUsage(),
         queryFn: async () => {
-          const response = await fetch('/api/categories')
-          if (!response.ok) throw new Error('Failed to fetch categories')
-          return response.json()
+          const response = await fetch('/api/categories?withUsage=true')
+          if (!response.ok) throw new Error('Failed to fetch categories with usage')
+          const result = await response.json()
+          // 处理 API 返回 {success, data} 格式
+          if (result && typeof result === 'object' && 'data' in result) {
+            return result.data || []
+          }
+          return result || []
         },
         staleTime: 10 * 60 * 1000,
       })
@@ -134,11 +139,11 @@ export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
                     <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <div
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${user?.role === "super_admin"
-                          ? "bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700 dark:from-yellow-900/30 dark:to-orange-900/30 dark:text-orange-300"
+                        className={`px-2 py-1 rounded-full text-xs font-medium border ${user?.role === "super_admin"
+                          ? "bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700 dark:from-yellow-900/40 dark:to-orange-900/40 dark:text-orange-200 border-orange-200 dark:border-orange-700"
                           : user?.role === "admin"
-                            ? "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 dark:from-purple-900/30 dark:to-pink-900/30 dark:text-purple-300"
-                            : "bg-gradient-to-r from-emerald-100 to-cyan-100 text-emerald-700 dark:from-emerald-900/30 dark:to-cyan-900/30 dark:text-emerald-300"
+                            ? "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 dark:from-purple-900/40 dark:to-pink-900/40 dark:text-purple-200 border-purple-200 dark:border-purple-700"
+                            : "bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-200 border-blue-200 dark:border-blue-700"
                           }`}
                       >
                         {user?.role === "super_admin" ? "超级管理员" : user?.role === "admin" ? "管理员" : "用户"}

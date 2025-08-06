@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { db } from "@/lib/db-client"
-import type { Website, Category, CategoryWithUsage } from "@/lib/db-types"
+import type { Website, Category } from "@/lib/db-types"
 
 // 查询键
 export const websiteKeys = {
@@ -8,7 +8,7 @@ export const websiteKeys = {
   approved: () => [...websiteKeys.all, 'approved'] as const,
   allWebsites: () => [...websiteKeys.all, 'all-status'] as const,
   categories: () => ['categories'] as const,
-  categoriesWithUsage: () => [...websiteKeys.categories(), 'with-usage'] as const,
+  categoriesWithUsage: () => ['categories-with-usage'] as const, // 使用独立的查询键避免缓存冲突
 }
 
 // 获取已批准的网站
@@ -229,11 +229,12 @@ export function useDeleteWebsite() {
 
 // 获取带使用统计的分类
 export function useCategoriesWithUsage() {
-  console.log('useCategoriesWithUsage hook 被调用了！')
+  console.log('useCategoriesWithUsage hook 被调用了！查询键:', websiteKeys.categoriesWithUsage())
   return useQuery({
     queryKey: websiteKeys.categoriesWithUsage(),
     queryFn: async () => {
       console.log('开始获取分类使用统计数据...')
+      console.log('调用 db.getCategoriesWithUsageCount()...')
       try {
         const response = await db.getCategoriesWithUsageCount()
         console.log('获取到的原始分类使用统计数据:', response)
@@ -272,7 +273,7 @@ export function useAddCategory() {
     mutationFn: (category: Omit<Category, 'id' | 'created_at'>) =>
       db.createCategory(category),
     onSuccess: (newCategory) => {
-      // 乐观更新：立即添加到所有相关缓存
+      // 乐观更新：立即添加到基本分类缓存
       queryClient.setQueryData<Category[]>(websiteKeys.categories(), (old) => {
         if (!old) return [newCategory]
         // 确保 old 是数组类型
@@ -280,12 +281,8 @@ export function useAddCategory() {
         return [...old, newCategory].sort((a, b) => a.name.localeCompare(b.name))
       })
 
-      queryClient.setQueryData<CategoryWithUsage[]>(websiteKeys.categoriesWithUsage(), (old) => {
-        if (!old) return [{ ...newCategory, website_count: 0 }]
-        // 确保 old 是数组类型
-        if (!Array.isArray(old)) return [{ ...newCategory, website_count: 0 }]
-        return [...old, { ...newCategory, website_count: 0 }].sort((a, b) => a.name.localeCompare(b.name))
-      })
+      // 对于带使用统计的分类，重新获取真实数据而不是手动设置
+      queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
     },
     onError: () => {
       // 发生错误时重新获取数据
@@ -303,7 +300,7 @@ export function useUpdateCategory() {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Omit<Category, 'id' | 'created_at'>> }) =>
       db.updateCategory(id, updates),
     onSuccess: (updatedCategory) => {
-      // 乐观更新：立即更新所有相关缓存中的数据
+      // 乐观更新：立即更新基本分类缓存
       queryClient.setQueryData<Category[]>(websiteKeys.categories(), (old) => {
         if (!old) return [updatedCategory]
         // 确保 old 是数组类型
@@ -313,16 +310,9 @@ export function useUpdateCategory() {
         ).sort((a, b) => a.name.localeCompare(b.name))
       })
 
-      queryClient.setQueryData<CategoryWithUsage[]>(websiteKeys.categoriesWithUsage(), (old) => {
-        if (!old) return [{ ...updatedCategory, website_count: 0 }]
-        // 确保 old 是数组类型
-        if (!Array.isArray(old)) return [{ ...updatedCategory, website_count: 0 }]
-        return old.map((category) =>
-          category.id === updatedCategory.id
-            ? { ...updatedCategory, website_count: category.website_count }
-            : category
-        ).sort((a, b) => a.name.localeCompare(b.name))
-      })
+      // 对于带使用统计的分类，重新获取真实数据而不是手动设置
+      // 因为 updatedCategory 没有 website_count 字段，手动设置会导致数据不完整
+      queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
 
       // 同时更新网站缓存中的分类信息
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
@@ -363,82 +353,16 @@ export function useDeleteCategory() {
 
   return useMutation({
     mutationFn: (id: string) => db.deleteCategory(id),
-    onMutate: async (deletedId) => {
-      // 取消任何正在进行的查询以避免冲突
-      await queryClient.cancelQueries({ queryKey: websiteKeys.categories() })
-      await queryClient.cancelQueries({ queryKey: websiteKeys.categoriesWithUsage() })
-      await queryClient.cancelQueries({ queryKey: websiteKeys.allWebsites() })
-      await queryClient.cancelQueries({ queryKey: websiteKeys.approved() })
-
-      // 保存当前数据以便回滚
-      const previousCategories = queryClient.getQueryData<Category[]>(websiteKeys.categories())
-      const previousCategoriesWithUsage = queryClient.getQueryData<CategoryWithUsage[]>(websiteKeys.categoriesWithUsage())
-      const previousAllWebsites = queryClient.getQueryData<Website[]>(websiteKeys.allWebsites())
-      const previousApprovedWebsites = queryClient.getQueryData<Website[]>(websiteKeys.approved())
-
-      // 乐观更新：立即从所有缓存中移除
-      queryClient.setQueryData<Category[]>(websiteKeys.categories(), (old) => {
-        if (!old) return []
-        // 确保 old 是数组类型
-        if (!Array.isArray(old)) return []
-        return old.filter((category) => category.id !== deletedId)
-      })
-
-      queryClient.setQueryData<CategoryWithUsage[]>(websiteKeys.categoriesWithUsage(), (old) => {
-        if (!old) return []
-        // 确保 old 是数组类型
-        if (!Array.isArray(old)) return []
-        return old.filter((category) => category.id !== deletedId)
-      })
-
-      // 更新网站缓存，将删除分类的网站的 category 设为 undefined
-      queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
-        if (!old) return []
-        // 确保 old 是数组类型
-        if (!Array.isArray(old)) return []
-        return old.map((website) =>
-          website.category?.id === deletedId
-            ? { ...website, category: undefined, category_id: '' }
-            : website
-        )
-      })
-
-      queryClient.setQueryData<Website[]>(websiteKeys.approved(), (old) => {
-        if (!old) return []
-        // 确保 old 是数组类型
-        if (!Array.isArray(old)) return []
-        return old.map((website) =>
-          website.category?.id === deletedId
-            ? { ...website, category: undefined, category_id: '' }
-            : website
-        )
-      })
-
-      // 返回上下文以便在错误时回滚
-      return {
-        previousCategories,
-        previousCategoriesWithUsage,
-        previousAllWebsites,
-        previousApprovedWebsites
-      }
+    onSuccess: () => {
+      // 删除成功后，重新获取所有相关数据以确保同步
+      // 不进行乐观更新，因为删除操作会影响网站数量统计
+      queryClient.invalidateQueries({ queryKey: websiteKeys.categories() })
+      queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
+      queryClient.invalidateQueries({ queryKey: websiteKeys.allWebsites() })
+      queryClient.invalidateQueries({ queryKey: websiteKeys.approved() })
     },
-    onError: (err, deletedId, context) => {
-      // 回滚乐观更新
-      if (context?.previousCategories) {
-        queryClient.setQueryData(websiteKeys.categories(), context.previousCategories)
-      }
-      if (context?.previousCategoriesWithUsage) {
-        queryClient.setQueryData(websiteKeys.categoriesWithUsage(), context.previousCategoriesWithUsage)
-      }
-      if (context?.previousAllWebsites) {
-        queryClient.setQueryData(websiteKeys.allWebsites(), context.previousAllWebsites)
-      }
-      if (context?.previousApprovedWebsites) {
-        queryClient.setQueryData(websiteKeys.approved(), context.previousApprovedWebsites)
-      }
-    },
-    onSettled: () => {
-      // 无论成功失败，都重新获取数据以确保同步
+    onError: () => {
+      // 发生错误时重新获取数据
       queryClient.invalidateQueries({ queryKey: websiteKeys.categories() })
       queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
       queryClient.invalidateQueries({ queryKey: websiteKeys.allWebsites() })
