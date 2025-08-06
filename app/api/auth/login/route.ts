@@ -6,9 +6,97 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database'
 import { cookies } from 'next/headers'
 
+// 登录尝试记录 - 基于内存的简单实现
+interface LoginAttempt {
+  count: number
+  lastAttempt: number
+  blockedUntil?: number
+}
+
+const loginAttempts = new Map<string, LoginAttempt>()
+
+// 配置
+const MAX_ATTEMPTS = 5 // 最大尝试次数
+const BLOCK_DURATION = 15 * 60 * 1000 // 封锁时间：15分钟
+const ATTEMPT_WINDOW = 5 * 60 * 1000 // 尝试窗口：5分钟
+
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  const realIP = request.headers.get('x-real-ip')
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim()
+  }
+
+  if (realIP) {
+    return realIP
+  }
+
+  return 'unknown'
+}
+
+function isBlocked(ip: string): boolean {
+  const attempt = loginAttempts.get(ip)
+  if (!attempt) return false
+
+  const now = Date.now()
+
+  // 检查是否在封锁期内
+  if (attempt.blockedUntil && now < attempt.blockedUntil) {
+    return true
+  }
+
+  // 清理过期的封锁
+  if (attempt.blockedUntil && now >= attempt.blockedUntil) {
+    loginAttempts.delete(ip)
+    return false
+  }
+
+  return false
+}
+
+function recordFailedAttempt(ip: string): void {
+  const now = Date.now()
+  const attempt = loginAttempts.get(ip)
+
+  if (!attempt) {
+    loginAttempts.set(ip, {
+      count: 1,
+      lastAttempt: now
+    })
+    return
+  }
+
+  // 如果距离上次尝试超过窗口时间，重置计数
+  if (now - attempt.lastAttempt > ATTEMPT_WINDOW) {
+    loginAttempts.set(ip, {
+      count: 1,
+      lastAttempt: now
+    })
+    return
+  }
+
+  // 增加尝试次数
+  attempt.count++
+  attempt.lastAttempt = now
+
+  // 如果达到最大尝试次数，设置封锁
+  if (attempt.count >= MAX_ATTEMPTS) {
+    attempt.blockedUntil = now + BLOCK_DURATION
+  }
+
+  loginAttempts.set(ip, attempt)
+}
+
+function recordSuccessfulLogin(ip: string): void {
+  // 成功登录后清除记录
+  loginAttempts.delete(ip)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
+    const clientIP = getClientIP(request)
 
     if (!email || !password) {
       return NextResponse.json(
@@ -17,15 +105,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 检查IP是否被封锁
+    if (isBlocked(clientIP)) {
+      const attempt = loginAttempts.get(clientIP)
+      const remainingTime = attempt?.blockedUntil ? Math.ceil((attempt.blockedUntil - Date.now()) / 1000 / 60) : 0
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: `登录尝试过于频繁，请在 ${remainingTime} 分钟后重试`,
+          blocked: true,
+          remainingTime
+        },
+        { status: 429 }
+      )
+    }
+
     // 使用数据库服务器端方法进行认证
     const result = await db.authenticateUser(email, password)
 
     if (!result.success) {
+      // 记录失败尝试
+      recordFailedAttempt(clientIP)
+
+      const attempt = loginAttempts.get(clientIP)
+      const remainingAttempts = MAX_ATTEMPTS - (attempt?.count || 0)
+
+      let message = result.message
+      if (remainingAttempts > 0) {
+        message += ` (剩余尝试次数: ${remainingAttempts})`
+      }
+
       return NextResponse.json(
-        { success: false, message: result.message },
+        { success: false, message },
         { status: 401 }
       )
     }
+
+    // 成功登录，清除失败记录
+    recordSuccessfulLogin(clientIP)
 
     // 设置HTTP-only cookie
     const cookieStore = await cookies()

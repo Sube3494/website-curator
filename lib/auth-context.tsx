@@ -57,8 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       // 获取基础URL，避免在服务器端使用相对路径
-      const baseUrl = typeof window !== 'undefined' 
-        ? window.location.origin 
+      const baseUrl = typeof window !== 'undefined'
+        ? window.location.origin
         : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
       const response = await fetch(`${baseUrl}/api/auth/login`, {
         method: 'POST',
@@ -73,23 +73,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (result.success && result.user) {
         setUser(result.user)
-        
+
         // 触发登录成功事件
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent("loginSuccess"))
         }, 100)
-        
+
         return true
       } else {
         // 检查是否是账户被禁用
         if (result.message?.includes('禁用')) {
           setShowAccountDisabledDialog(true)
         }
-        return false
+
+        // 检查是否是防爆破限制
+        if (result.blocked) {
+          // 抛出特殊错误，包含剩余时间信息
+          throw new Error(`RATE_LIMITED:${result.message}`)
+        }
+
+        // 抛出普通登录错误
+        throw new Error(result.message || '登录失败')
       }
     } catch (error) {
       console.error('登录失败:', error)
-      return false
+      // 重新抛出错误，让调用方处理
+      throw error
     } finally {
       setIsLoading(false)
     }

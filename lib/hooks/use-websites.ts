@@ -99,6 +99,8 @@ export function useAddWebsite() {
       // 乐观更新：立即添加到所有相关缓存
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
         if (!old) return [newWebsite]
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return [newWebsite]
         return [newWebsite, ...old]
       })
 
@@ -106,6 +108,8 @@ export function useAddWebsite() {
       if (newWebsite.status === 'approved') {
         queryClient.setQueryData<Website[]>(websiteKeys.approved(), (old) => {
           if (!old) return [newWebsite]
+          // 确保 old 是数组类型
+          if (!Array.isArray(old)) return [newWebsite]
           return [newWebsite, ...old]
         })
       }
@@ -135,6 +139,8 @@ export function useUpdateWebsite() {
       // 乐观更新：立即更新所有相关缓存中的数据
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
         if (!old) return [updatedWebsite]
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return [updatedWebsite]
         return old.map((website) =>
           website.id === updatedWebsite.id ? updatedWebsite : website
         )
@@ -142,6 +148,9 @@ export function useUpdateWebsite() {
 
       queryClient.setQueryData<Website[]>(websiteKeys.approved(), (old) => {
         if (!old) return updatedWebsite.status === 'approved' ? [updatedWebsite] : []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return updatedWebsite.status === 'approved' ? [updatedWebsite] : []
+
         if (updatedWebsite.status === 'approved') {
           // 如果更新后是已批准状态，添加或更新
           const exists = old.some(w => w.id === updatedWebsite.id)
@@ -184,11 +193,15 @@ export function useDeleteWebsite() {
       // 乐观更新：立即从所有缓存中移除
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.filter((website) => website.id !== deletedId)
       })
 
       queryClient.setQueryData<Website[]>(websiteKeys.approved(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.filter((website) => website.id !== deletedId)
       })
 
@@ -262,11 +275,15 @@ export function useAddCategory() {
       // 乐观更新：立即添加到所有相关缓存
       queryClient.setQueryData<Category[]>(websiteKeys.categories(), (old) => {
         if (!old) return [newCategory]
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return [newCategory]
         return [...old, newCategory].sort((a, b) => a.name.localeCompare(b.name))
       })
 
       queryClient.setQueryData<CategoryWithUsage[]>(websiteKeys.categoriesWithUsage(), (old) => {
         if (!old) return [{ ...newCategory, website_count: 0 }]
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return [{ ...newCategory, website_count: 0 }]
         return [...old, { ...newCategory, website_count: 0 }].sort((a, b) => a.name.localeCompare(b.name))
       })
     },
@@ -289,6 +306,8 @@ export function useUpdateCategory() {
       // 乐观更新：立即更新所有相关缓存中的数据
       queryClient.setQueryData<Category[]>(websiteKeys.categories(), (old) => {
         if (!old) return [updatedCategory]
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return [updatedCategory]
         return old.map((category) =>
           category.id === updatedCategory.id ? updatedCategory : category
         ).sort((a, b) => a.name.localeCompare(b.name))
@@ -296,6 +315,8 @@ export function useUpdateCategory() {
 
       queryClient.setQueryData<CategoryWithUsage[]>(websiteKeys.categoriesWithUsage(), (old) => {
         if (!old) return [{ ...updatedCategory, website_count: 0 }]
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return [{ ...updatedCategory, website_count: 0 }]
         return old.map((category) =>
           category.id === updatedCategory.id
             ? { ...updatedCategory, website_count: category.website_count }
@@ -306,6 +327,8 @@ export function useUpdateCategory() {
       // 同时更新网站缓存中的分类信息
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.map((website) =>
           website.category?.id === updatedCategory.id
             ? { ...website, category: updatedCategory }
@@ -315,6 +338,8 @@ export function useUpdateCategory() {
 
       queryClient.setQueryData<Website[]>(websiteKeys.approved(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.map((website) =>
           website.category?.id === updatedCategory.id
             ? { ...website, category: updatedCategory }
@@ -354,17 +379,23 @@ export function useDeleteCategory() {
       // 乐观更新：立即从所有缓存中移除
       queryClient.setQueryData<Category[]>(websiteKeys.categories(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.filter((category) => category.id !== deletedId)
       })
 
       queryClient.setQueryData<CategoryWithUsage[]>(websiteKeys.categoriesWithUsage(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.filter((category) => category.id !== deletedId)
       })
 
       // 更新网站缓存，将删除分类的网站的 category 设为 undefined
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.map((website) =>
           website.category?.id === deletedId
             ? { ...website, category: undefined, category_id: '' }
@@ -374,6 +405,8 @@ export function useDeleteCategory() {
 
       queryClient.setQueryData<Website[]>(websiteKeys.approved(), (old) => {
         if (!old) return []
+        // 确保 old 是数组类型
+        if (!Array.isArray(old)) return []
         return old.map((website) =>
           website.category?.id === deletedId
             ? { ...website, category: undefined, category_id: '' }

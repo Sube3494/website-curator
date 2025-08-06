@@ -192,6 +192,16 @@ export class Database {
     }
   }
 
+  async getCategoryById(id: string): Promise<Category | null> {
+    try {
+      const query = 'SELECT * FROM categories WHERE id = ?'
+      return await executeQuerySingle<Category>(query, [id])
+    } catch (error) {
+      console.error('获取分类失败:', error)
+      throw new DatabaseError('获取分类失败')
+    }
+  }
+
   async createCategory(categoryData: Omit<Category, 'id' | 'created_at'>): Promise<Category> {
     try {
       const id = generateUUID()
@@ -392,6 +402,16 @@ export class Database {
 
   async getApprovedWebsites(): Promise<Website[]> {
     return await this.getWebsites({ status: 'approved' })
+  }
+
+  async getWebsiteById(id: string): Promise<Website | null> {
+    try {
+      const websites = await this.getWebsites()
+      return websites.find(w => w.id === id) || null
+    } catch (error) {
+      console.error('获取网站详情失败:', error)
+      throw new DatabaseError('获取网站详情失败')
+    }
   }
 
   async createWebsite(websiteData: WebsiteSubmission & { submitted_by?: string }): Promise<Website> {

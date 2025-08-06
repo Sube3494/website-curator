@@ -159,14 +159,23 @@ export const db = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     })
+    if (!response.ok) {
+      const result = await response.json()
+      throw new Error(result.message || '更新网站失败')
+    }
     const result = await response.json()
     return result.success ? result.data : null
   },
 
   async deleteWebsite(id: string) {
-    await fetch(`${getBaseUrl()}/api/websites/${id}`, {
+    const response = await fetch(`${getBaseUrl()}/api/websites/${id}`, {
       method: 'DELETE'
     })
+    if (!response.ok) {
+      const result = await response.json()
+      throw new Error(result.message || '删除网站失败')
+    }
+    return true
   },
 
   // 收藏相关

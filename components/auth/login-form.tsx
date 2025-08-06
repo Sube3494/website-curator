@@ -41,21 +41,23 @@ export function LoginForm({ onToggleMode, onAccountDisabled }: LoginFormProps) {
 
     try {
       // 尝试登录
-      const success = await login(email, password)
+      await login(email, password)
+      // 登录成功，由 auth context 处理导航
+    } catch (error: any) {
+      // 处理不同类型的错误
+      const errorMessage = error.message || "登录失败。请稍后重试。"
 
-      if (success) {
-        // 登录成功，但不在这里导航，而是由 auth context 处理
-        return
+      if (errorMessage.startsWith('RATE_LIMITED:')) {
+        // 防爆破限制错误
+        const message = errorMessage.replace('RATE_LIMITED:', '')
+        setError(message)
+      } else if (errorMessage.includes('禁用')) {
+        // 账户被禁用，由 auth context 处理对话框
+        setError("账户已被禁用，请联系管理员")
+      } else {
+        // 其他错误（密码错误等）
+        setError(errorMessage)
       }
-
-      // 账户状态检查已经由后端API完成
-
-      // 如果需要处理账户被禁用情况，现在由后端API完成
-
-      // 登录失败，显示通用错误
-      setError("邮箱或密码不正确。请重试。")
-    } catch (_err) {
-      setError("登录失败。请稍后重试。")
     } finally {
       setIsLoading(false)
     }
