@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
-import { useSystemSettings } from "@/lib/system-settings-context"
+import { useAllSystemSettings } from "@/lib/hooks/use-system-settings"
 import { useApprovedWebsites, useCategories } from "@/lib/hooks/use-websites"
 import { useFavorites, useAddFavorite, useRemoveFavorite } from "@/lib/hooks/use-favorites"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -49,10 +49,19 @@ interface WebsiteBrowserProps {
 
 export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   const { user } = useAuth()
-  const { settings } = useSystemSettings()
+  const { data: systemSettings = [] } = useAllSystemSettings()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+
+  // 将系统设置数组转换为对象格式
+  const settings = useMemo(() => {
+    const settingsObj: Record<string, any> = {}
+    systemSettings.forEach(setting => {
+      settingsObj[setting.key] = setting.value
+    })
+    return settingsObj
+  }, [systemSettings])
 
   // 使用 React Query hooks
   const { data: approvedWebsites = [], isLoading: websitesLoading } = useApprovedWebsites()
@@ -599,7 +608,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
           {/* 提交网站按钮 */}
           {user ? (
             // 用户已登录，根据设置显示提交按钮或登录按钮
-            settings.allow_website_submission ? (
+            settings.allow_website_submission?.enabled ? (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
