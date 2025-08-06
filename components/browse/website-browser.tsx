@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { useSystemSettings } from "@/lib/system-settings-context"
 import { useApprovedWebsites, useCategories } from "@/lib/hooks/use-websites"
 import { useFavorites, useAddFavorite, useRemoveFavorite } from "@/lib/hooks/use-favorites"
@@ -30,8 +30,8 @@ import { FilterPanel } from "./filter-panel"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
-// 使用 Supabase 的 Website 类型
-import type { Website } from "@/lib/supabase"
+// 使用 Website 类型
+import type { Website } from "@/lib/db-client"
 
 // 默认颜色作为后备方案
 const defaultCategoryColors = {
@@ -48,7 +48,7 @@ interface WebsiteBrowserProps {
 }
 
 export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
-  const { user } = useSupabaseAuth()
+  const { user } = useAuth()
   const { settings } = useSystemSettings()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)

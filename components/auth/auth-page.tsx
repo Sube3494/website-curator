@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { LoginForm } from "./login-form"
 import { RegisterForm } from "./register-form"
 import { Globe, Sparkles, Star, ArrowLeft } from "lucide-react"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useSupabaseAuth } from "@/lib/auth-context"
 import { AccountDisabledModal } from "./account-disabled-modal"
 
 // 定义一个自定义事件，用于退出登录页面

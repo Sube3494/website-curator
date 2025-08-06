@@ -11,11 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { useTheme } from "next-themes"
 import { useQueryClient } from "@tanstack/react-query"
 import { websiteKeys } from "@/lib/hooks/use-websites"
-import { db } from "@/lib/supabase"
+import { db } from "@/lib/db-client"
 import { useEffect, useState } from "react"
 
 interface HeaderProps {
@@ -25,7 +25,7 @@ interface HeaderProps {
 }
 
 export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
-  const { user, logout } = useSupabaseAuth()
+  const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -42,17 +42,25 @@ export function Header({ onNavigate, currentPage, onShowAuth }: HeaderProps) {
   // 预加载管理面板数据
   const prefetchAdminData = () => {
     if (user?.role === "admin" || user?.role === "super_admin") {
-      // 预加载网站数据
+      // 预加载网站数据 - 通过API调用而不是直接数据库访问
       queryClient.prefetchQuery({
         queryKey: websiteKeys.allWebsites(),
-        queryFn: () => db.getWebsites(),
+        queryFn: async () => {
+          const response = await fetch('/api/websites')
+          if (!response.ok) throw new Error('Failed to fetch websites')
+          return response.json()
+        },
         staleTime: 5 * 60 * 1000,
       })
 
-      // 预加载分类数据
+      // 预加载分类数据 - 通过API调用
       queryClient.prefetchQuery({
         queryKey: websiteKeys.categoriesWithUsage(),
-        queryFn: () => db.getCategoriesWithUsageCount(),
+        queryFn: async () => {
+          const response = await fetch('/api/categories')
+          if (!response.ok) throw new Error('Failed to fetch categories')
+          return response.json()
+        },
         staleTime: 10 * 60 * 1000,
       })
     }

@@ -99,8 +99,11 @@ jobs:
     - name: 构建应用
       run: pnpm build
       env:
-        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+        DB_HOST: ${{ secrets.DB_HOST || 'localhost' }}
+        DB_USER: ${{ secrets.DB_USER || 'test_user' }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD || 'test_password' }}
+        DB_NAME: ${{ secrets.DB_NAME || 'website_curator_test' }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-secret-key-for-ci' }}
 
     - name: 上传构建产物
       uses: actions/upload-artifact@v4

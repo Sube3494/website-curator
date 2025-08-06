@@ -1,3 +1,10 @@
+/*
+ * @Date: 2025-07-04 16:22:33
+ * @Author: Sube
+ * @FilePath: react-query-provider.tsx
+ * @LastEditTime: 2025-08-05 22:00:15
+ * @Description: 
+ */
 "use client"
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"

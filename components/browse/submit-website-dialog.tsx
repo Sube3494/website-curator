@@ -21,7 +21,7 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { useCategories, useAddWebsite } from "@/lib/hooks/use-websites"
 import { toast } from "sonner"
 
@@ -31,7 +31,7 @@ interface SubmitWebsiteDialogProps {
 }
 
 export function SubmitWebsiteDialog({ open, onOpenChange }: SubmitWebsiteDialogProps) {
-    const { user } = useSupabaseAuth()
+    const { user } = useAuth()
     const { data: categories = [] } = useCategories()
     const addWebsiteMutation = useAddWebsite()
 

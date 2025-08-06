@@ -3,14 +3,16 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
-import { supabase } from "@/lib/supabase"
+import { useSupabaseAuth } from "@/lib/auth-context"
+import { db } from "@/lib/db-client"
+
 
 interface LoginFormProps {
   onToggleMode: () => void
@@ -18,6 +20,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onToggleMode, onAccountDisabled }: LoginFormProps) {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -45,18 +48,9 @@ export function LoginForm({ onToggleMode, onAccountDisabled }: LoginFormProps) {
         return
       }
 
-      // 检查账户是否被禁用
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("status")
-        .eq("email", email)
-        .single()
+      // 账户状态检查已经由后端API完成
 
-      if (userData && userData.status === "inactive") {
-        // 账户被禁用，显示特殊消息
-        onAccountDisabled()
-        return
-      }
+      // 如果需要处理账户被禁用情况，现在由后端API完成
 
       // 登录失败，显示通用错误
       setError("邮箱或密码不正确。请重试。")
@@ -147,6 +141,17 @@ export function LoginForm({ onToggleMode, onAccountDisabled }: LoginFormProps) {
           </Button>
         </form>
 
+        {/* 忘记密码链接 */}
+        <div className="text-center mt-3">
+          <button
+            type="button"
+            onClick={() => router.push('/forgot-password')}
+            className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-200 font-medium"
+          >
+            忘记密码？
+          </button>
+        </div>
+
         <div className="relative my-3 sm:my-4">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-gray-200 dark:border-gray-600" />
@@ -164,7 +169,6 @@ export function LoginForm({ onToggleMode, onAccountDisabled }: LoginFormProps) {
         >
           创建账户
         </Button>
-
 
       </CardContent>
     </Card>

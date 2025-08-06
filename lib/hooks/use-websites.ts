@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { db, type Website, type Category, type CategoryWithUsage } from "@/lib/supabase"
+import { db } from "@/lib/db-client"
+import type { Website, Category, CategoryWithUsage } from "@/lib/db-types"
 
 // 查询键
 export const websiteKeys = {
@@ -14,7 +15,23 @@ export const websiteKeys = {
 export function useApprovedWebsites() {
   return useQuery({
     queryKey: websiteKeys.approved(),
-    queryFn: () => db.getApprovedWebsites(),
+    queryFn: async () => {
+      try {
+        console.log('正在获取已批准的网站数据...')
+        const response = await db.getApprovedWebsites()
+        // 处理 API 返回 {success, data} 格式
+        console.log('已批准网站数据响应:', response)
+        if (response && typeof response === 'object' && 'data' in response) {
+          console.log('处理后的已批准网站数据:', response.data)
+          return response.data || []
+        }
+        console.log('原始已批准网站数据:', response)
+        return response || []
+      } catch (error) {
+        console.error('获取已批准网站数据失败:', error)
+        return []
+      }
+    },
     staleTime: 5 * 60 * 1000, // 5 分钟
     gcTime: 10 * 60 * 1000, // 10 分钟
   })
@@ -24,7 +41,23 @@ export function useApprovedWebsites() {
 export function useAllWebsites() {
   return useQuery({
     queryKey: websiteKeys.allWebsites(),
-    queryFn: () => db.getWebsites(),
+    queryFn: async () => {
+      try {
+        console.log('正在获取所有网站数据...')
+        const response = await db.getWebsites()
+        // 处理 API 返回 {success, data} 格式
+        console.log('网站数据响应:', response)
+        if (response && typeof response === 'object' && 'data' in response) {
+          console.log('处理后的网站数据:', response.data)
+          return response.data || []
+        }
+        console.log('原始网站数据:', response)
+        return response || []
+      } catch (error) {
+        console.error('获取网站数据失败:', error)
+        return []
+      }
+    },
     staleTime: 5 * 60 * 1000, // 5 分钟（增加缓存时间）
     gcTime: 10 * 60 * 1000, // 10 分钟
     refetchOnWindowFocus: false, // 禁用窗口焦点时重新获取
@@ -36,7 +69,14 @@ export function useAllWebsites() {
 export function useCategories() {
   return useQuery({
     queryKey: websiteKeys.categories(),
-    queryFn: () => db.getCategories(),
+    queryFn: async () => {
+      const response = await db.getCategories()
+      // 处理 API 返回 {success, data} 格式
+      if (response && typeof response === 'object' && 'data' in response) {
+        return response.data || []
+      }
+      return response || []
+    },
     staleTime: 10 * 60 * 1000, // 分类变化较少，缓存 10 分钟
     gcTime: 20 * 60 * 1000, // 20 分钟
   })
@@ -47,8 +87,14 @@ export function useAddWebsite() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (website: Omit<Website, 'id' | 'created_at' | 'updated_at'>) =>
-      db.createWebsite(website),
+    mutationFn: async (website: Omit<Website, 'id' | 'created_at' | 'updated_at'>) => {
+      const response = await db.createWebsite(website)
+      // 处理 API 返回 {success, data} 格式
+      if (response && typeof response === 'object' && 'data' in response) {
+        return response.data
+      }
+      return response
+    },
     onSuccess: (newWebsite) => {
       // 乐观更新：立即添加到所有相关缓存
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
@@ -77,8 +123,14 @@ export function useUpdateWebsite() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<Website> }) =>
-      db.updateWebsite(id, updates),
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Website> }) => {
+      const response = await db.updateWebsite(id, updates)
+      // 处理 API 返回 {success, data} 格式
+      if (response && typeof response === 'object' && 'data' in response) {
+        return response.data
+      }
+      return response
+    },
     onSuccess: (updatedWebsite) => {
       // 乐观更新：立即更新所有相关缓存中的数据
       queryClient.setQueryData<Website[]>(websiteKeys.allWebsites(), (old) => {
@@ -164,11 +216,36 @@ export function useDeleteWebsite() {
 
 // 获取带使用统计的分类
 export function useCategoriesWithUsage() {
+  console.log('useCategoriesWithUsage hook 被调用了！')
   return useQuery({
     queryKey: websiteKeys.categoriesWithUsage(),
-    queryFn: () => db.getCategoriesWithUsageCount(),
-    staleTime: 10 * 60 * 1000, // 10 分钟（增加缓存时间）
-    gcTime: 20 * 60 * 1000, // 20 分钟
+    queryFn: async () => {
+      console.log('开始获取分类使用统计数据...')
+      try {
+        const response = await db.getCategoriesWithUsageCount()
+        console.log('获取到的原始分类使用统计数据:', response)
+
+        // 处理 API 返回 {success, data} 格式
+        let result = []
+        if (response && typeof response === 'object' && 'data' in response) {
+          result = response.data || []
+        } else {
+          result = response || []
+        }
+
+        console.log('处理后的分类使用统计数据:', result)
+        console.log('第一个分类的详细数据 (from hook):', result[0])
+        if (result[0]) {
+          console.log('第一个分类的字段 (from hook):', Object.keys(result[0]))
+        }
+        return result
+      } catch (error) {
+        console.error('获取分类使用统计失败:', error)
+        throw error
+      }
+    },
+    staleTime: 0, // 禁用缓存，强制每次重新获取
+    gcTime: 0, // 立即清理
     refetchOnWindowFocus: false, // 禁用窗口焦点时重新获取
     refetchOnReconnect: true, // 网络重连时重新获取
   })

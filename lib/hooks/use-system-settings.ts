@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { db, SystemSetting } from '@/lib/supabase'
+import { db } from '@/lib/db-client'
+import type { SystemSetting } from '@/lib/db-types'
 
 // Query keys
 const settingsKeys = {

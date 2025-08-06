@@ -58,11 +58,16 @@ next-env.d.ts
 # turbo
 .turbo
 
-# Supabase
-.branches
-.temp
-.import
-.migration
+# MySQL dumps and backups
+*.sql.backup
+*.sql.dump
+
+# Documentation drafts and temporary files
+*.draft.md
+*.temp.md
+.env.vercel.example
 
 #memory bank
 memory_bank.md
+
+project_document

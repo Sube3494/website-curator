@@ -1,16 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SystemSettingsProvider } from "@/lib/system-settings-context"
-import { SupabaseWebsitesProvider } from "@/lib/supabase-websites-context"
+// 使用React Query hooks替代Provider模式
 import { AuthPage } from "@/components/auth/auth-page"
 import { Header } from "@/components/layout/header"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 import { WebsiteBrowser } from "@/components/browse/website-browser"
 import { FavoritesPage } from "@/components/favorites/favorites-page"
-import { SupabaseAuthProvider } from "@/lib/supabase-auth-context"
+import { AuthProvider } from "@/lib/auth-context"
 import { ReactQueryProvider } from "@/lib/react-query-provider"
 import { PerformanceMonitor } from "@/components/ui/performance-monitor"
 import { Toaster } from "sonner"
@@ -19,7 +19,7 @@ import { NetworkMonitor } from "@/components/ui/network-monitor"
 import { SystemSettingsPage } from "@/components/settings/system-settings-page"
 
 function AppContent() {
-  const { user } = useSupabaseAuth()
+  const { user } = useAuth()
   const [currentPage, setCurrentPage] = useState("browse")
   const [showAuth, setShowAuth] = useState(false)
 
@@ -160,13 +160,11 @@ export default function App() {
         enableSystem
         disableTransitionOnChange
       >
-        <SupabaseAuthProvider>
+        <AuthProvider>
           <SystemSettingsProvider>
-            <SupabaseWebsitesProvider>
-              <AppContent />
-            </SupabaseWebsitesProvider>
+            <AppContent />
           </SystemSettingsProvider>
-        </SupabaseAuthProvider>
+        </AuthProvider>
       </ThemeProvider>
     </ReactQueryProvider>
   )

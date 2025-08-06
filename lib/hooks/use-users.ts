@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { db, User } from '@/lib/supabase'
+import { db } from '@/lib/db-client'
+import type { User } from '@/lib/db-types'
 
 // Query keys
 const userKeys = {
@@ -12,7 +13,14 @@ const userKeys = {
 export function useAllUsers() {
   return useQuery({
     queryKey: userKeys.allUsers(),
-    queryFn: () => db.getAllUsers(),
+    queryFn: async () => {
+      const response = await db.getAllUsers()
+      // 处理 API 返回 {success, data} 格式
+      if (response && typeof response === 'object' && 'data' in response) {
+        return response.data || []
+      }
+      return response || []
+    },
     staleTime: 5 * 60 * 1000, // 5分钟
     gcTime: 10 * 60 * 1000, // 10分钟
   })
@@ -22,7 +30,14 @@ export function useAllUsers() {
 export function useUser(id: string) {
   return useQuery({
     queryKey: userKeys.user(id),
-    queryFn: () => db.getUser(id),
+    queryFn: async () => {
+      const response = await db.getUser(id)
+      // 处理 API 返回 {success, data} 格式
+      if (response && typeof response === 'object' && 'data' in response) {
+        return response.data
+      }
+      return response
+    },
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -77,6 +92,24 @@ export function useUpdateUserStatus() {
     },
     onError: (error) => {
       console.error('Error updating user status:', error)
+    },
+  })
+}
+
+// 更新用户可信状态
+export function useUpdateUserTrusted() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, trusted }: { id: string; trusted: boolean }) =>
+      db.updateUser(id, { trusted }),
+    onSuccess: (data) => {
+      // 更新缓存
+      queryClient.setQueryData(userKeys.user(data.id), data)
+      queryClient.invalidateQueries({ queryKey: userKeys.allUsers() })
+    },
+    onError: (error) => {
+      console.error('Error updating user trusted status:', error)
     },
   })
 }

@@ -59,9 +59,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useSupabaseAuth } from "@/lib/auth-context"
 import {
   useAllWebsites,
+  useApprovedWebsites,
   useCategories,
   useAddWebsite,
   useUpdateWebsite,
@@ -76,10 +77,11 @@ import {
   useUpdateUser,
   useUpdateUserStatus,
   useUpdateUserRole,
+  useUpdateUserTrusted,
   useRefreshUsers
 } from "@/lib/hooks/use-users"
 import { SystemSettingsPage } from "@/components/settings/system-settings-page"
-import { Website as SupabaseWebsite, Category, CategoryWithUsage, User } from "@/lib/supabase"
+import type { Website, Category, CategoryWithUsage, User } from "@/lib/db-types"
 import {
   WebsiteTableSkeleton,
   CategoryTableSkeleton,
@@ -215,22 +217,55 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("websites")
 
   // 使用 React Query hooks
-  const { data: supabaseWebsites = [], isLoading: websitesLoading } = useAllWebsites()
-  const { data: categories = [] } = useCategories()
+  // 直接获取审批状态的网站，确保websites始终是数组
+  const { data: approvedData = [] } = useApprovedWebsites()
+  console.log('已批准的网站数据:', approvedData)
+  
+  // 获取所有网站
+  const { data: websiteData = [], isLoading: websitesLoading } = useAllWebsites()
+  console.log('管理面板网站数据:', websiteData)
+  
+  // 合并处理数据
+  // 如果网站数据是空的，使用已批准网站数据
+  let websites = []
+  if (Array.isArray(websiteData) && websiteData.length > 0) {
+    websites = websiteData
+  } else if (Array.isArray(approvedData) && approvedData.length > 0) {
+    websites = approvedData
+  }
+  console.log('最终处理后的网站数据:', websites)
+  const { data: categoryData = [] } = useCategories()
+  const categories = Array.isArray(categoryData) ? categoryData : []
   const addWebsiteMutation = useAddWebsite()
   const updateWebsiteMutation = useUpdateWebsite()
   const deleteWebsiteMutation = useDeleteWebsite()
 
   // 分类管理相关 hooks
-  const { data: categoriesWithUsage = [], isLoading: categoriesLoading } = useCategoriesWithUsage()
+  const { data: categoriesWithUsageData = [], isLoading: categoriesLoading, isError: categoriesError, error: categoriesErrorData } = useCategoriesWithUsage()
+  console.log('管理面板分类数据:', categoriesWithUsageData)
+  console.log('分类加载状态:', { isLoading: categoriesLoading, isError: categoriesError, error: categoriesErrorData })
+  // 正确处理分类数据：如果是 {success, data} 格式，提取 data；否则直接使用
+  const categoriesWithUsage = Array.isArray(categoriesWithUsageData)
+    ? categoriesWithUsageData
+    : (categoriesWithUsageData && typeof categoriesWithUsageData === 'object' && 'data' in categoriesWithUsageData)
+      ? (Array.isArray(categoriesWithUsageData.data) ? categoriesWithUsageData.data : [])
+      : []
+  console.log('处理后的分类数据:', categoriesWithUsage)
+  // 详细检查第一个分类的数据结构
+  if (categoriesWithUsage.length > 0) {
+    console.log('第一个分类的详细数据:', categoriesWithUsage[0])
+    console.log('第一个分类的字段:', Object.keys(categoriesWithUsage[0]))
+  }
   const addCategoryMutation = useAddCategory()
   const updateCategoryMutation = useUpdateCategory()
   const deleteCategoryMutation = useDeleteCategory()
 
   // 用户管理相关 hooks
-  const { data: supabaseUsers = [], isLoading: usersLoading } = useAllUsers()
+  const { data: userData = [], isLoading: usersLoading } = useAllUsers()
+  const supabaseUsers = Array.isArray(userData) ? userData : []
   const updateUserStatusMutation = useUpdateUserStatus()
   const updateUserRoleMutation = useUpdateUserRole()
+  const updateUserTrustedMutation = useUpdateUserTrusted()
   const refreshUsers = useRefreshUsers()
 
   // 搜索和过滤状态
@@ -255,7 +290,7 @@ export function AdminDashboard() {
 
   const [deletingWebsites, setDeletingWebsites] = useState<Set<string>>(new Set())
   const [deletingCategories, setDeletingCategories] = useState<Set<string>>(new Set())
-  const [editingWebsite, setEditingWebsite] = useState<SupabaseWebsite | null>(null)
+  const [editingWebsite, setEditingWebsite] = useState<Website | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newWebsite, setNewWebsite] = useState({
@@ -413,7 +448,7 @@ export function AdminDashboard() {
 
   // 过滤网站、分类和用户数据
   const filteredWebsites = useMemo(() => {
-    return supabaseWebsites.filter((website) => {
+    return websites.filter((website) => {
       const matchesSearch =
         website.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         website.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
@@ -423,12 +458,15 @@ export function AdminDashboard() {
 
       return matchesSearch && matchesStatus
     })
-  }, [supabaseWebsites, debouncedSearchQuery, statusFilter])
+  }, [websites, debouncedSearchQuery, statusFilter])
 
   const filteredCategories = useMemo(() => {
-    return categoriesWithUsage.filter((category) => {
-      return category.name.toLowerCase().includes(debouncedCategorySearchQuery.toLowerCase())
+    console.log('过滤分类前数据:', categoriesWithUsage)
+    const filtered = categoriesWithUsage.filter((category) => {
+      return category && category.name && category.name.toLowerCase().includes(debouncedCategorySearchQuery.toLowerCase())
     })
+    console.log('过滤后分类数据:', filtered)
+    return filtered
   }, [categoriesWithUsage, debouncedCategorySearchQuery])
 
   const filteredUsers = useMemo(() => {
@@ -476,7 +514,7 @@ export function AdminDashboard() {
     setUsersPage(1)
   }, [debouncedUserSearchQuery])
 
-  const handleStatusChange = useCallback(async (websiteId: string, newStatus: SupabaseWebsite["status"]) => {
+  const handleStatusChange = useCallback(async (websiteId: string, newStatus: Website["status"]) => {
     try {
       await updateWebsiteMutation.mutateAsync({ id: websiteId, updates: { status: newStatus } })
     } catch (error) {
@@ -767,6 +805,19 @@ export function AdminDashboard() {
     }
   }, [updateUserRoleMutation])
 
+  const handleUserTrustedChange = useCallback(async (userId: string, trusted: boolean) => {
+    try {
+      await updateUserTrustedMutation.mutateAsync({
+        id: userId,
+        trusted
+      })
+      toast.success(`用户已${trusted ? '设为' : '取消'}可信用户`)
+    } catch (error) {
+      console.error('Error updating user trusted status:', error)
+      toast.error('更新用户可信状态失败，请重试')
+    }
+  }, [updateUserTrustedMutation])
+
   // 检查用户是否可以被操作（保护逻辑）
   const canModifyUser = useCallback((targetUser: User) => {
     if (!user) return false
@@ -804,7 +855,7 @@ export function AdminDashboard() {
     return true
   }, [canModifyUser, user])
 
-  const handleEditClick = useCallback((website: SupabaseWebsite) => {
+  const handleEditClick = useCallback((website: Website) => {
     setEditingWebsite(website)
     setIsEditDialogOpen(true)
   }, [])
@@ -829,7 +880,23 @@ export function AdminDashboard() {
         background: `linear-gradient(to right, ${customFromHex}, ${customToHex})`
       }
     }
-    return {}
+    
+    if (fromColor && toColor) {
+      if (fromColor.startsWith('#') || toColor.startsWith('#')) {
+        return {
+          background: `linear-gradient(to right, ${fromColor}, ${toColor})`
+        }
+      }
+      return {
+        // 使用内联样式而非动态类名
+        background: `linear-gradient(to right, var(--${fromColor}, #f97316), var(--${toColor}, #f59e0b))`
+      }
+    }
+    
+    // 默认颜色
+    return {
+      background: `linear-gradient(to right, #f97316, #f59e0b)`
+    }
   }, [])
 
   // 分类管理处理函数
@@ -948,7 +1015,7 @@ export function AdminDashboard() {
     }
   }, [])
 
-  const getStatusColor = (status: SupabaseWebsite["status"]) => {
+  const getStatusColor = (status: Website["status"]) => {
     switch (status) {
       case "approved":
         return "bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 dark:from-emerald-900/30 dark:to-teal-900/30 dark:text-emerald-300"
@@ -973,15 +1040,17 @@ export function AdminDashboard() {
   }
 
   const stats = {
-    totalWebsites: supabaseWebsites.length,
-    pendingWebsites: supabaseWebsites.filter((w) => w.status === "pending").length,
-    approvedWebsites: supabaseWebsites.filter((w) => w.status === "approved").length,
+    totalWebsites: websites.length,
+    pendingWebsites: websites.filter((w) => w.status === "pending").length,
+    approvedWebsites: websites.filter((w) => w.status === "approved").length,
     totalUsers: supabaseUsers.length,
     activeUsers: supabaseUsers.filter((u) => u.status === "active").length,
   }
+  
+  console.log('统计数据:', stats)
 
   // 渐进式加载：立即显示界面，数据加载时显示骨架屏
-  const showWebsitesSkeleton = websitesLoading && supabaseWebsites.length === 0
+  const showWebsitesSkeleton = websitesLoading && websites.length === 0
   const showCategoriesSkeleton = categoriesLoading && categoriesWithUsage.length === 0
 
   // 处理网站选择
@@ -1009,7 +1078,7 @@ export function AdminDashboard() {
   }, [filteredWebsites])
 
   // 获取状态的中文名称
-  const getStatusText = (status: SupabaseWebsite["status"]) => {
+  const getStatusText = (status: Website["status"]) => {
     switch (status) {
       case "approved": return "已批准"
       case "pending": return "待审核"
@@ -1936,18 +2005,44 @@ export function AdminDashboard() {
                               <div className="text-muted-foreground">
                                 {debouncedCategorySearchQuery ? (
                                   <div className="space-y-2">
-                                    <p>No categories found matching "{debouncedCategorySearchQuery}"</p>
+                                    <p>没有找到匹配"{debouncedCategorySearchQuery}"的分类</p>
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => setCategorySearchQuery("")}
                                       className="text-xs"
                                     >
-                                      Clear search
+                                      清除搜索
+                                    </Button>
+                                  </div>
+                                ) : categoriesLoading ? (
+                                  <div className="space-y-2">
+                                    <p>正在加载分类数据...</p>
+                                  </div>
+                                ) : categoriesError ? (
+                                  <div className="space-y-2">
+                                    <p>加载分类数据失败</p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.location.reload()}
+                                      className="text-xs"
+                                    >
+                                      刷新页面
                                     </Button>
                                   </div>
                                 ) : (
-                                  "No categories found"
+                                  <div className="space-y-2">
+                                    <p>暂无分类数据</p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setIsAddCategoryDialogOpen(true)}
+                                      className="text-xs"
+                                    >
+                                      添加第一个分类
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             </TableCell>
@@ -1985,21 +2080,27 @@ export function AdminDashboard() {
                                 <TableCell className="text-center">
                                   <div className="flex justify-center">
                                     <div
-                                      className="h-6 w-20 rounded-full shadow-sm"
-                                      style={
-                                        category.color_from.startsWith('#') || category.color_to.startsWith('#')
-                                          ? { background: `linear-gradient(to right, ${category.color_from}, ${category.color_to})` }
-                                          : {}
+                                      className={
+                                        (category.color_from && category.color_to &&
+                                         !category.color_from.startsWith('#') && !category.color_to.startsWith('#'))
+                                          ? `h-6 w-20 rounded-full shadow-sm bg-gradient-to-r from-${category.color_from} to-${category.color_to}`
+                                          : "h-6 w-20 rounded-full shadow-sm"
                                       }
-                                      {...(!category.color_from.startsWith('#') && !category.color_to.startsWith('#') && {
-                                        className: `h-6 w-20 rounded-full shadow-sm bg-gradient-to-r from-${category.color_from} to-${category.color_to}`
-                                      })}
+                                      style={
+                                        (category.color_from && category.color_to &&
+                                         (category.color_from.startsWith('#') || category.color_to.startsWith('#')))
+                                          ? { background: `linear-gradient(to right, ${category.color_from}, ${category.color_to})` }
+                                          : (!category.color_from || !category.color_to ||
+                                             (!category.color_from.startsWith('#') && !category.color_to.startsWith('#')))
+                                            ? undefined
+                                            : { background: `linear-gradient(to right, #f97316, #f59e0b)` }
+                                      }
                                     ></div>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
-                                    {category.website_count} 个网站
+                                    {category.website_count || 0} 个网站
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-center text-muted-foreground">
@@ -2376,6 +2477,7 @@ export function AdminDashboard() {
                         </TableHead>
                         <TableHead className="font-semibold">用户</TableHead>
                         <TableHead className="font-semibold text-center">角色</TableHead>
+                        <TableHead className="font-semibold text-center">可信用户</TableHead>
                         <TableHead className="font-semibold text-center">注册时间</TableHead>
                         <TableHead className="font-semibold text-center">状态</TableHead>
                         <TableHead className="font-semibold text-center">操作</TableHead>
@@ -2399,6 +2501,9 @@ export function AdminDashboard() {
                               <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
                             </TableCell>
                             <TableCell className="text-center">
+                              <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                            </TableCell>
+                            <TableCell className="text-center">
                               <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
                             </TableCell>
                             <TableCell className="text-center">
@@ -2411,7 +2516,7 @@ export function AdminDashboard() {
                         ))
                       ) : filteredUsers.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
+                          <TableCell colSpan={6} className="text-center py-8">
                             <div className="text-muted-foreground">
                               {debouncedUserSearchQuery ? (
                                 <div className="space-y-2">
@@ -2473,6 +2578,16 @@ export function AdminDashboard() {
                                 }
                               >
                                 {targetUser.role === "super_admin" ? "超级管理员" : targetUser.role === "admin" ? "管理员" : "用户"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge
+                                className={targetUser.trusted
+                                  ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
+                                  : "bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600"
+                                }
+                              >
+                                {targetUser.trusted ? "可信用户" : "普通用户"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center">{new Date(targetUser.created_at).toLocaleDateString()}</TableCell>
@@ -2537,6 +2652,31 @@ export function AdminDashboard() {
                                           降级
                                         </Button>
                                       ) : null
+                                    )}
+
+                                    {/* 可信用户管理按钮 */}
+                                    {canModifyUserRole(targetUser) && targetUser.role === "user" && (
+                                      targetUser.trusted ? (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleUserTrustedChange(targetUser.id, false)}
+                                          className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-all duration-200"
+                                          title="取消可信用户"
+                                        >
+                                          取消可信
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleUserTrustedChange(targetUser.id, true)}
+                                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all duration-200"
+                                          title="设为可信用户"
+                                        >
+                                          设为可信
+                                        </Button>
+                                      )
                                     )}
                                   </>
                                 )}
@@ -2707,7 +2847,7 @@ export function AdminDashboard() {
                 <Label htmlFor="edit-status">状态</Label>
                 <Select
                   value={editingWebsite.status}
-                  onValueChange={(value: SupabaseWebsite["status"]) => setEditingWebsite({ ...editingWebsite, status: value })}
+                  onValueChange={(value: Website["status"]) => setEditingWebsite({ ...editingWebsite, status: value })}
                 >
                   <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-purple-500">
                     <SelectValue />

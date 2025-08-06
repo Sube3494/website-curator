@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useAuth } from "@/lib/auth-context"
 
 interface SidebarProps {
   categories: string[]
@@ -42,7 +42,7 @@ export function Sidebar({
   realTimeFavoritesCount,
   websitesTotal
 }: SidebarProps) {
-  const { user } = useSupabaseAuth()
+  const { user } = useAuth()
   const [isMobile, setIsMobile] = useState(false)
 
   // 检测移动设备

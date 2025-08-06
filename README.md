@@ -4,9 +4,9 @@
 
 <img src="public/android-chrome-512x512.png" alt="Website Curator Logo" width="120" height="120">
 
-一个现代化的网站收藏和管理平台，基于 Next.js 和 Supabase 构建。
+一个现代化的网站收藏和管理平台，基于 Next.js 和 MySQL 构建。
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/) [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/) [![React](https://img.shields.io/badge/React-19-blue)](https://reactjs.org/) [![Supabase](https://img.shields.io/badge/Supabase-Database-green)](https://supabase.com/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/) [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/) [![React](https://img.shields.io/badge/React-19-blue)](https://reactjs.org/) [![MySQL](https://img.shields.io/badge/MySQL-5.7-blue)](https://mysql.com/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
 </div>
 
@@ -14,7 +14,7 @@
 
 ## ✨ 功能特性
 
-- 🔐 **用户认证系统** - 基于 Supabase Auth 的完整用户管理
+- 🔐 **用户认证系统** - 基于 JWT 的完整用户管理
 - 📝 **网站提交与审核** - 用户可提交网站，管理员审核发布
 - 🏷️ **分类和标签管理** - 灵活的网站分类和标签系统
 - ⭐ **收藏功能** - 用户可收藏喜欢的网站
@@ -86,8 +86,8 @@
 
 - **前端框架**: Next.js 15 + React 19
 - **样式**: Tailwind CSS + shadcn/ui
-- **数据库**: Supabase (PostgreSQL)
-- **认证**: Supabase Auth
+- **数据库**: MySQL
+- **认证**: JWT + bcrypt
 - **状态管理**: React Query (TanStack Query)
 - **表单处理**: React Hook Form + Zod
 - **测试**: Playwright
@@ -108,24 +108,24 @@ graph LR
     A[React 19] --> B[Next.js 15]
     B --> C[Tailwind CSS]
     B --> D[shadcn/ui]
-    B --> E[Supabase]
-    E --> F[PostgreSQL]
+    B --> E[MySQL]
+    E --> F[JWT Auth]
 
     style A fill:#61dafb
     style B fill:#000000,color:#fff
     style C fill:#38bdf8
     style D fill:#000000,color:#fff
-    style E fill:#3ecf8e
-    style F fill:#336791,color:#fff
+    style E fill:#4479a1,color:#fff
+    style F fill:#000000,color:#fff
 ```
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-- Node.js 18+ 
+- Node.js 18+
 - pnpm
-- Supabase 账户
+- MySQL 5.7+
 
 ### 1. 克隆项目
 
@@ -145,16 +145,22 @@ pnpm install
 创建 `.env.local` 文件：
 
 ```env
-# Supabase 配置
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# MySQL 数据库配置
+DB_HOST=localhost
+DB_USER=your_mysql_username
+DB_PASSWORD=your_mysql_password
+DB_NAME=website_curator
+
+# JWT 密钥
+JWT_SECRET=your_jwt_secret_key_here
 ```
 
 ### 4. 数据库设置
 
-1. 在 Supabase 中创建新项目
-2. 在 Supabase SQL 编辑器中运行 `database-init.sql` 脚本
-   - 这个脚本包含了完整的数据库结构、初始数据和权限设置
+1. 安装并启动 MySQL 5.7+
+2. 创建数据库：`CREATE DATABASE website_curator;`
+3. 运行 `database-init-mysql.sql` 脚本初始化数据库结构
+   - 这个脚本包含了完整的数据库结构、初始数据和索引
    - 脚本是幂等的，可以安全地重复运行
 
 ### 5. 启动开发服务器
@@ -181,7 +187,7 @@ pnpm dev
 ├── lib/                   # 工具库和配置
 ├── public/                # 静态资源
 ├── tests/                 # 测试文件
-└── database-init.sql      # 数据库初始化脚本
+└── database-init-mysql.sql # MySQL 数据库初始化脚本
 ```
 
 ## 🔧 开发指南
@@ -217,15 +223,13 @@ pnpm test:headed
 
 ## 📦 部署
 
-### Vercel 部署
+详细的部署指南请查看：[Vercel 部署指南](docs/vercel-deployment.md)
 
-1. 连接 GitHub 仓库到 Vercel
-2. 配置环境变量
-3. 部署
-
-### 其他平台
-
-项目支持部署到任何支持 Next.js 的平台。
+快速部署步骤：
+1. 运行 `pnpm run setup:vercel` 生成环境变量配置
+2. 连接 GitHub 仓库到 Vercel
+3. 配置环境变量
+4. 部署
 
 ## 🤝 贡献指南
 
@@ -243,38 +247,22 @@ pnpm test:headed
 
 **Sube** - [GitHub](https://github.com/Sube3494)
 
-## 🤝 贡献者
 
-<div align="center">
-
-[![Contributors](https://contrib.rocks/image?repo=Sube3494/website-curator)](https://github.com/Sube3494/website-curator/graphs/contributors)
-
-</div>
 
 ## 📚 文档
 
-- 📖 [部署指南](DEPLOYMENT.md) - 详细的部署说明
-- 🤝 [贡献指南](CONTRIBUTING.md) - 如何参与项目开发
-- 🔒 [安全政策](SECURITY.md) - 安全相关信息
-- 📝 [更新日志](CHANGELOG.md) - 版本更新记录
+- 📖 [Vercel 部署指南](docs/vercel-deployment.md) - 详细的部署说明
+- 🏗️ [架构文档](docs/ARCHITECTURE.md) - 系统架构和技术栈
 - ⚖️ [许可证](LICENSE) - MIT 许可证
 
 ## 🙏 致谢
 
 - [Next.js](https://nextjs.org/)
-- [Supabase](https://supabase.com/)
+- [MySQL](https://mysql.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [shadcn/ui](https://ui.shadcn.com/)
 
-## 📊 项目统计
 
-<div align="center">
-
-![GitHub stars](https://img.shields.io/github/stars/Sube3494/website-curator?style=social) ![GitHub forks](https://img.shields.io/github/forks/Sube3494/website-curator?style=social) ![GitHub issues](https://img.shields.io/github/issues/Sube3494/website-curator) ![GitHub pull requests](https://img.shields.io/github/issues-pr/Sube3494/website-curator)
-
-[![GitHub Activity Graph](https://github-readme-activity-graph.vercel.app/graph?username=Sube3494&repo=website-curator&theme=react-dark)](https://github.com/Sube3494/website-curator)
-
-</div>
 
 ---
 

@@ -39,38 +39,39 @@ graph TB
     end
 
     %% 后端服务层
-    subgraph "后端服务 (Supabase)"
+    subgraph "后端服务 (Next.js API)"
         subgraph "认证服务"
-            A1[Supabase Auth]
-            A2[JWT令牌]
-            A3[用户会话]
+            A1[JWT认证]
+            A2[bcrypt加密]
+            A3[用户会话管理]
         end
-        
+
         subgraph "API层"
-            API1[REST API]
-            API2[实时订阅]
-            API3[RPC函数]
+            API1[Next.js API Routes]
+            API2[数据验证]
+            API3[业务逻辑层]
         end
-        
+
         subgraph "权限控制"
-            RLS1[行级安全策略]
-            RLS2[角色权限]
+            RLS1[角色权限验证]
+            RLS2[API权限中间件]
         end
     end
 
     %% 数据库层
-    subgraph "数据库 (PostgreSQL)"
+    subgraph "数据库 (MySQL 5.7)"
         subgraph "核心表"
             DB1[(users)]
             DB2[(websites)]
             DB3[(categories)]
             DB4[(tags)]
         end
-        
+
         subgraph "关联表"
             DB5[(favorites)]
             DB6[(website_tags)]
             DB7[(system_settings)]
+            DB8[(password_reset_tokens)]
         end
     end
 
@@ -149,10 +150,10 @@ graph LR
 
     %% 后端服务
     subgraph "后端服务"
-        H[Supabase] --> I[PostgreSQL]
-        H --> J[Supabase Auth]
-        H --> K[Row Level Security]
-        H --> L[Real-time API]
+        H[Next.js API] --> I[MySQL 5.7]
+        H --> J[JWT认证]
+        H --> K[权限验证]
+        H --> L[邮件服务]
     end
 
     %% 开发工具
@@ -197,43 +198,45 @@ graph LR
 sequenceDiagram
     participant U as 用户
     participant F as 前端应用
-    participant A as Supabase Auth
-    participant API as Supabase API
-    participant DB as PostgreSQL
-    participant RLS as RLS策略
+    participant API as Next.js API
+    participant AUTH as JWT认证
+    participant DB as MySQL
+    participant MAIL as 邮件服务
 
     Note over U,DB: 用户认证流程
     U->>F: 访问应用
-    F->>A: 检查认证状态
-    A->>F: 返回用户信息/未认证
-    
+    F->>API: 检查认证状态
+    API->>AUTH: 验证JWT令牌
+    AUTH->>F: 返回用户信息/未认证
+
     alt 未认证用户
         F->>U: 显示登录界面
         U->>F: 提交登录信息
-        F->>A: 发送认证请求
-        A->>F: 返回JWT令牌
+        F->>API: 发送认证请求
+        API->>DB: 验证用户凭据
+        API->>AUTH: 生成JWT令牌
+        AUTH->>F: 返回JWT令牌
         F->>U: 跳转到主页
     end
 
     Note over U,DB: 数据操作流程
     U->>F: 请求数据(网站列表)
     F->>API: 发送API请求(带JWT)
-    API->>RLS: 验证权限
-    RLS->>DB: 执行查询
-    DB->>RLS: 返回数据
-    RLS->>API: 过滤后的数据
+    API->>AUTH: 验证权限
+    AUTH->>API: 权限验证结果
+    API->>DB: 执行查询
+    DB->>API: 返回数据
     API->>F: 返回JSON数据
     F->>U: 渲染界面
 
-    Note over U,DB: 实时更新流程
-    U->>F: 订阅实时更新
-    F->>API: 建立WebSocket连接
-    
-    loop 数据变化时
-        DB->>API: 触发变更事件
-        API->>F: 推送更新数据
-        F->>U: 更新界面
-    end
+    Note over U,MAIL: 密码重置流程
+    U->>F: 请求密码重置
+    F->>API: 发送重置请求
+    API->>DB: 生成重置令牌
+    API->>MAIL: 发送重置邮件
+    MAIL->>U: 接收重置邮件
+    U->>F: 点击重置链接
+    F->>API: 验证令牌并重置密码
 ```
 
 ## 核心组件说明
@@ -247,10 +250,10 @@ sequenceDiagram
 - **React Hook Form + Zod**: 表单处理和验证
 
 ### 后端层
-- **Supabase**: 提供数据库、认证、实时API
-- **PostgreSQL**: 关系型数据库
-- **Row Level Security**: 数据安全策略
-- **JWT**: 用户认证令牌
+- **MySQL**: 关系型数据库
+- **Next.js API Routes**: 后端API接口
+- **JWT + bcrypt**: 用户认证和密码加密
+- **数据库连接池**: 高效的数据库连接管理
 
 ### 部署层
 - **Vercel**: 前端应用部署
@@ -260,15 +263,16 @@ sequenceDiagram
 ## 安全架构
 
 ### 认证与授权
-1. **JWT 令牌认证**: 基于 Supabase Auth
+1. **JWT 令牌认证**: 基于自定义 JWT 实现
 2. **角色权限控制**: user/admin/super_admin
-3. **行级安全策略**: 数据库层面的权限控制
+3. **API 权限验证**: 接口层面的权限控制
 
 ### 数据安全
 1. **HTTPS 传输**: 所有数据传输加密
 2. **环境变量**: 敏感信息环境隔离
 3. **输入验证**: Zod 模式验证
-4. **SQL 注入防护**: Supabase 内置防护
+4. **SQL 注入防护**: 参数化查询防护
+5. **密码加密**: bcrypt 哈希加密
 
 ## 性能优化
 
@@ -287,9 +291,10 @@ sequenceDiagram
 ## 扩展性设计
 
 ### 水平扩展
-- Supabase 自动扩展数据库
+- MySQL 数据库集群和读写分离
 - Vercel 自动扩展前端服务
 - CDN 全球分发
+- 数据库连接池优化
 
 ### 功能扩展
 - 模块化组件设计

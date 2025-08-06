@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { useFavorites, useRemoveFavorite } from "@/lib/hooks/use-favorites"
 import { useCategories } from "@/lib/hooks/use-websites"
 import { toast } from "sonner"
@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import type { Website as SupabaseWebsite } from "@/lib/supabase"
+import type { Website } from "@/lib/db-client"
 
 // 默认颜色作为后备方案
 const categoryColors = {
@@ -43,7 +43,7 @@ const categoryColors = {
 }
 
 export function FavoritesPage() {
-  const { user } = useSupabaseAuth()
+  const { user } = useAuth()
   const { data: favorites = [], isLoading } = useFavorites(user?.id || null)
   const { data: dbCategories = [] } = useCategories()
   const removeFavoriteMutation = useRemoveFavorite(user?.id || null)

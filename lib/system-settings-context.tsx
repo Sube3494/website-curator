@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect } from "react"
-import { supabase, db, type SystemSetting } from "@/lib/supabase"
+import { type SystemSetting } from "@/lib/types"
 
 const defaultSettings = {
   allow_registration: true,
@@ -28,22 +28,41 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const { data: settings, error } = await supabase
-          .from('system_settings')
-          .select('*');
-        
-        if (error) {
-          throw error;
-        }
-
-        // 处理设置数据
-        const settingsObj: Record<string, any> = { ...defaultSettings };
-        settings.forEach((setting: SystemSetting) => {
-          settingsObj[setting.key] = setting.value;
+        // 通过API获取系统设置
+        const response = await fetch('/api/system-settings', {
+          credentials: 'include'
         });
 
-        setSettings(settingsObj);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // 处理设置数据
+            const settingsObj: Record<string, any> = { ...defaultSettings };
+            result.data.forEach((setting: any) => {
+              try {
+                // 解析 JSON 格式的设置值，支持新接口格式
+                const key = setting.key || setting.setting_key;
+                const value = setting.value || setting.setting_value;
+                
+                settingsObj[key] = typeof value === 'string' 
+                  ? JSON.parse(value) 
+                  : value;
+              } catch (parseError) {
+                // 如果解析失败，使用原始值
+                const key = setting.key || setting.setting_key;
+                const value = setting.value || setting.setting_value;
+                settingsObj[key] = value;
+              }
+            });
+            setSettings(settingsObj);
+          } else {
+            throw new Error(result.message || '获取系统设置失败');
+          }
+        } else {
+          throw new Error('API请求失败');
+        }
       } catch (error) {
+        console.error('加载系统设置失败:', error);
         // 如果出错，使用默认设置
         setSettings(defaultSettings);
       } finally {
@@ -63,8 +82,25 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
       }));
       
       // 发送到服务器
-      await db.updateSystemSetting(key, value);
+      console.log('正在更新设置:', { key, value })
+      const response = await fetch('/api/system-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ key, value })
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        console.error('服务器返回错误:', result);
+        throw new Error(result.message || '更新设置失败');
+      } else {
+        console.log('设置更新成功');
+      }
     } catch (error) {
+      console.error('更新设置出错:', error);
       // 恢复原值
       setSettings(prev => ({
         ...prev,

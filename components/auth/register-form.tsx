@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, User, Eye, EyeOff, CheckCircle } from "lucide-react"
-import { useSupabaseAuth } from "@/lib/supabase-auth-context"
+import { useSupabaseAuth } from "@/lib/auth-context"
 
 interface RegisterFormProps {
   onToggleMode: () => void

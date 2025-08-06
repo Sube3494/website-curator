@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { db, type Website, type Favorite } from "@/lib/supabase"
+import { db } from "@/lib/db-client"
+import type { Website, Favorite } from "@/lib/db-types"
 
 // 查询键
 export const favoriteKeys = {
