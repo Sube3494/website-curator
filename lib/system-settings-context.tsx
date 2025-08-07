@@ -1,7 +1,6 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect } from "react"
-import { type SystemSetting } from "@/lib/types"
 
 const defaultSettings = {
   allow_registration: true,
@@ -47,7 +46,7 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
                 settingsObj[key] = typeof value === 'string' 
                   ? JSON.parse(value) 
                   : value;
-              } catch (parseError) {
+              } catch (_parseError) {
                 // 如果解析失败，使用原始值
                 const key = setting.key || setting.setting_key;
                 const value = setting.value || setting.setting_value;
