@@ -4,6 +4,7 @@
 // {{START MODIFICATIONS}}
 import { NextRequest, NextResponse } from 'next/server'
 import { db, getCurrentUserFromToken } from '@/lib/database'
+import { revalidateTag } from 'next/cache'
 
 // 获取所有用户
 export async function GET(request: NextRequest) {

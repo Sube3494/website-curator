@@ -4,6 +4,9 @@
 // {{START MODIFICATIONS}}
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database'
+import { unstable_cache, revalidateTag } from 'next/cache'
+import { cookies } from 'next/headers'
+import { getCurrentUserFromToken } from '@/lib/database'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,10 +14,19 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     
     let websites
+    // 为前台只读列表提供缓存（120秒）
+    const getApprovedWebsitesCached = unstable_cache(
+      async () => {
+        const list = await db.getApprovedWebsites()
+        return Array.isArray(list) ? list : []
+      },
+      ['websites-approved'],
+      { revalidate: 120, tags: ['websites-approved'] }
+    )
     
     if (status === 'approved') {
       // 获取已批准的网站（用于前端展示）
-      websites = await db.getApprovedWebsites()
+      websites = await getApprovedWebsitesCached()
       console.log('API: 获取已批准的网站:', websites.length)
     } else if (status) {
       // 获取指定状态的网站
@@ -47,11 +59,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: '未登录' },
+        { status: 401 }
+      )
+    }
+    const currentUser = await getCurrentUserFromToken(token)
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+      return NextResponse.json(
+        { success: false, message: '权限不足' },
+        { status: 403 }
+      )
+    }
+
     const websiteData = await request.json()
     
-    // TODO: 添加身份验证检查
-    
     const newWebsite = await db.createWebsite(websiteData)
+    // 写入后使只读列表缓存失效
+    try { revalidateTag('websites-approved') } catch {}
     
     return NextResponse.json({
       success: true,

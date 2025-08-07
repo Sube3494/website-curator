@@ -17,11 +17,15 @@ import { Toaster } from "sonner"
 import { GlobalErrorHandler } from "@/components/ui/error-boundary"
 import { NetworkMonitor } from "@/components/ui/network-monitor"
 import { SystemSettingsPage } from "@/components/settings/system-settings-page"
+import { useQueryClient } from "@tanstack/react-query"
+import { db } from "@/lib/db-client"
+import { websiteKeys } from "@/lib/hooks/use-websites"
 
 function AppContent() {
   const { user } = useAuth()
   const [currentPage, setCurrentPage] = useState("browse")
   const [showAuth, setShowAuth] = useState(false)
+  const queryClient = useQueryClient()
 
   // 增强版的页面导航处理函数
   const handleNavigate = (page: string) => {
@@ -136,6 +140,52 @@ function AppContent() {
         return <WebsiteBrowser onShowAuth={() => setShowAuth(true)} />
     }
   }
+
+  // 依据页面预取关键查询，降低首屏与切页请求
+  useEffect(() => {
+    const prefetchBrowse = async () => {
+      try {
+        await queryClient.prefetchQuery({
+          queryKey: websiteKeys.approved(),
+          queryFn: db.getApprovedWebsites,
+          staleTime: 5 * 60 * 1000,
+        })
+        await queryClient.prefetchQuery({
+          queryKey: websiteKeys.categories(),
+          queryFn: db.getCategories,
+          staleTime: 10 * 60 * 1000,
+        })
+      } catch {}
+    }
+
+    const prefetchAdmin = async () => {
+      try {
+        await queryClient.prefetchQuery({
+          queryKey: websiteKeys.allWebsites(),
+          queryFn: () => db.getWebsites(),
+          staleTime: 5 * 60 * 1000,
+        })
+        await queryClient.prefetchQuery({
+          queryKey: websiteKeys.categoriesWithUsage(),
+          queryFn: async () => {
+            const response = await db.getCategoriesWithUsageCount()
+            if (response && typeof response === 'object' && 'data' in response) {
+              return response.data || []
+            }
+            return response || []
+          },
+          staleTime: 5 * 60 * 1000,
+        })
+      } catch {}
+    }
+
+    if (currentPage === 'browse') {
+      prefetchBrowse()
+    }
+    if (currentPage === 'admin' || currentPage === 'users') {
+      prefetchAdmin()
+    }
+  }, [currentPage, queryClient])
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -5,21 +5,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, getCurrentUserFromToken } from '@/lib/database'
 import { cookies } from 'next/headers'
+import { unstable_cache, revalidateTag } from 'next/cache'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    
-    if (!userId) {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: '缺少用户ID' },
-        { status: 400 }
+        { success: false, message: '未登录' },
+        { status: 401 }
       )
     }
+    const currentUser = await getCurrentUserFromToken(token)
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, message: '会话已过期' },
+        { status: 401 }
+      )
+    }
+    const userId = currentUser.id
     
-    // 获取用户收藏
-    const favorites = await db.getFavorites(userId)
+    // 获取用户收藏（用户私有数据，不建议长时间共享缓存，可短缓存并打用户标签）
+    const getFavoritesCached = unstable_cache(
+      async (uid: string) => {
+        const favs = await db.getFavorites(uid)
+        return Array.isArray(favs) ? favs : []
+      },
+      (uid: string) => ['favorites', `favorites:${uid}`],
+      { revalidate: 60, tags: ['favorites'] }
+    )
+    const favorites = await getFavoritesCached(userId)
     
     return NextResponse.json({
       success: true,
@@ -74,6 +90,7 @@ export async function POST(request: NextRequest) {
 
     // 添加收藏
     await db.addFavorite(userId, websiteId)
+    try { revalidateTag('favorites') } catch {}
 
     return NextResponse.json({
       success: true,
@@ -129,6 +146,7 @@ export async function DELETE(request: NextRequest) {
 
     // 删除收藏
     await db.removeFavorite(userId, websiteId)
+    try { revalidateTag('favorites') } catch {}
 
     return NextResponse.json({
       success: true,

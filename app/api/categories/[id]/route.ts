@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { db } from '@/lib/database'
 import { getCurrentUserFromToken } from '@/lib/database'
+import { revalidateTag } from 'next/cache'
 
 // GET /api/categories/[id] - 获取单个分类
 export async function GET(
@@ -91,6 +92,10 @@ export async function PUT(
     }
 
     const updatedCategory = await db.updateCategory(id, updates)
+    try {
+      revalidateTag('categories')
+      revalidateTag('categories-usage')
+    } catch {}
 
     return NextResponse.json({
       success: true,
@@ -158,6 +163,10 @@ export async function DELETE(
 
     // 删除分类（数据库层会检查是否有关联的网站）
     await db.deleteCategory(id)
+    try {
+      revalidateTag('categories')
+      revalidateTag('categories-usage')
+    } catch {}
 
     return NextResponse.json({
       success: true,

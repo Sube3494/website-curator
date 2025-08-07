@@ -2,13 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getCurrentUserFromToken } from '@/lib/database'
 import { db } from '@/lib/database'
+import { revalidateTag, unstable_cache } from 'next/cache'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const website = await db.getWebsiteById(params.id)
+    const getWebsiteCached = unstable_cache(
+      async (id: string) => {
+        const w = await db.getWebsiteById(id)
+        return w || null
+      },
+      (id: string) => ['website', `website:${id}`],
+      { revalidate: 120, tags: ['websites-approved'] }
+    )
+    const website = await getWebsiteCached(params.id)
     
     if (!website) {
       return NextResponse.json(
@@ -67,6 +76,8 @@ export async function PUT(
     
     // 更新网站
     const updatedWebsite = await db.updateWebsite(params.id, updateData)
+    // 写入后失效前台已批准列表缓存
+    try { revalidateTag('websites-approved') } catch {}
     
     return NextResponse.json({
       success: true,
@@ -117,6 +128,8 @@ export async function DELETE(
     
     // 删除网站
     await db.deleteWebsite(params.id)
+    // 删除后失效前台已批准列表缓存
+    try { revalidateTag('websites-approved') } catch {}
     
     return NextResponse.json({
       success: true,

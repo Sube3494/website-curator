@@ -4,6 +4,7 @@
 // {{START MODIFICATIONS}}
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database' // 服务器端数据库连接
+import { unstable_cache, revalidateTag } from 'next/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +27,15 @@ export async function GET(request: NextRequest) {
       // 获取带使用统计的分类（管理员用）
       console.log('正在获取带使用统计的分类...')
       try {
-        categories = await db.getCategoriesWithUsageCount()
+        const getCategoriesUsageCached = unstable_cache(
+          async () => {
+            const list = await db.getCategoriesWithUsageCount()
+            return Array.isArray(list) ? list : []
+          },
+          ['categories-usage'],
+          { revalidate: 300, tags: ['categories-usage'] }
+        )
+        categories = await getCategoriesUsageCached()
         console.log('成功获取带使用统计的分类:', categories)
       } catch (error) {
         console.error('获取带使用统计的分类失败:', error)
@@ -36,7 +45,15 @@ export async function GET(request: NextRequest) {
     } else {
       // 获取基本分类信息
       console.log('正在获取基本分类信息...')
-      categories = await db.getCategories()
+      const getCategoriesCached = unstable_cache(
+        async () => {
+          const list = await db.getCategories()
+          return Array.isArray(list) ? list : []
+        },
+        ['categories'],
+        { revalidate: 600, tags: ['categories'] }
+      )
+      categories = await getCategoriesCached()
     }
 
     console.log('获取到的分类数据:', categories)

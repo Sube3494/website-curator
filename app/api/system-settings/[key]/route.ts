@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, getCurrentUserFromToken } from '@/lib/database'
 import { cookies } from 'next/headers'
+import { unstable_cache, revalidateTag } from 'next/cache'
 
 // GET /api/system-settings/[key] - 获取特定系统设置
 export async function GET(
@@ -20,7 +21,23 @@ export async function GET(
       )
     }
 
-    const setting = await db.getSystemSetting(key)
+    const getSettingCached = unstable_cache(
+      async (k: string) => {
+        const s = await db.getSystemSetting(k)
+        return s
+          ? {
+              key: s.setting_key,
+              value: s.setting_value,
+              description: s.description,
+              updated_at: s.updated_at,
+            }
+          : null
+      },
+      (k: string) => ['settings', `settings:${k}`],
+      { revalidate: 300, tags: ['settings'] }
+    )
+
+    const setting = await getSettingCached(key)
     
     if (!setting) {
       return NextResponse.json(
@@ -31,12 +48,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: {
-        key: setting.setting_key,
-        value: setting.setting_value,
-        description: setting.description,
-        updated_at: setting.updated_at
-      }
+      data: setting
     })
   } catch (error) {
     console.error('获取系统设置失败:', error)
@@ -107,6 +119,10 @@ export async function PUT(
       key: setting.setting_key,
       value: setting.setting_value
     }
+
+    try {
+      revalidateTag('settings')
+    } catch {}
 
     return NextResponse.json({
       success: true,

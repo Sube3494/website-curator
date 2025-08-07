@@ -1,72 +1,95 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { useIsFetching, useQueryClient } from "@tanstack/react-query"
 
 interface PerformanceMetrics {
   loadTime: number
   renderTime: number
-  cacheHits: number
-  totalRequests: number
+  totalFetches: number
+  freshQueries: number
+  totalQueries: number
 }
 
 export function PerformanceMonitor() {
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     loadTime: 0,
     renderTime: 0,
-    cacheHits: 0,
-    totalRequests: 0,
+    totalFetches: 0,
+    freshQueries: 0,
+    totalQueries: 0,
   })
   const [isVisible, setIsVisible] = useState(false)
+  const queryClient = useQueryClient()
+  const isFetching = useIsFetching()
+  const prevFetchStatuses = useRef<Map<string, string>>(new Map())
 
   useEffect(() => {
     const startTime = performance.now()
-    
-    // 监听页面加载完成
+
     const handleLoad = () => {
       const loadTime = performance.now() - startTime
       setMetrics(prev => ({ ...prev, loadTime }))
     }
 
-    // 监听渲染完成
     const handleRender = () => {
       const renderTime = performance.now() - startTime
       setMetrics(prev => ({ ...prev, renderTime }))
     }
 
-    // 模拟缓存命中统计（在实际应用中，这些数据应该来自 React Query）
-    const updateCacheStats = () => {
-      // 这里可以集成 React Query 的缓存统计
-      setMetrics(prev => ({
-        ...prev,
-        cacheHits: prev.cacheHits + Math.floor(Math.random() * 3),
-        totalRequests: prev.totalRequests + 1,
-      }))
-    }
-
     window.addEventListener('load', handleLoad)
     document.addEventListener('DOMContentLoaded', handleRender)
-    
-    // 定期更新缓存统计
-    const interval = setInterval(updateCacheStats, 2000)
+
+    // 以轮询方式采集指标，避免在他处渲染阶段触发 setState
+    const collect = () => {
+      try {
+        const queries: any[] = queryClient.getQueryCache().findAll()
+        const now = Date.now()
+        let total = 0
+        let fresh = 0
+        let totalFetches = 0
+        for (const qq of queries) {
+          const hasData = qq.state?.data !== undefined
+          if (qq.state?.fetchStatus === 'fetching') {
+            totalFetches += 1
+          }
+          if (!hasData) continue
+          total += 1
+          let staleTime = qq.options?.staleTime
+          if (typeof staleTime === 'function') {
+            try { staleTime = staleTime() } catch { staleTime = 0 }
+          }
+          if (staleTime === undefined || staleTime === null) staleTime = 0
+          const updatedAt = qq.state?.dataUpdatedAt || 0
+          const isFresh = staleTime === Infinity || (now - updatedAt < staleTime)
+          if (isFresh) fresh += 1
+        }
+        setMetrics(prev => ({ ...prev, freshQueries: fresh, totalQueries: total, totalFetches }))
+      } catch {}
+    }
+
+    collect()
+    const interval = setInterval(collect, 2000)
 
     return () => {
       window.removeEventListener('load', handleLoad)
       document.removeEventListener('DOMContentLoaded', handleRender)
       clearInterval(interval)
     }
-  }, [])
+  }, [queryClient])
 
-  // 开发环境下显示性能监控
   useEffect(() => {
     setIsVisible(process.env.NODE_ENV === 'development')
   }, [])
 
-  if (!isVisible) return null
+  const freshRatio = useMemo(() => {
+    return metrics.totalQueries > 0
+      ? ((metrics.freshQueries / metrics.totalQueries) * 100).toFixed(1)
+      : '0'
+  }, [metrics.freshQueries, metrics.totalQueries])
 
-  const cacheHitRate = metrics.totalRequests > 0 
-    ? ((metrics.cacheHits / metrics.totalRequests) * 100).toFixed(1)
-    : '0'
+  if (!isVisible) return null
 
   return (
     <div className="fixed bottom-4 right-4 z-50 bg-black/80 text-white p-3 rounded-lg text-xs space-y-1 backdrop-blur-sm">
@@ -79,11 +102,14 @@ export function PerformanceMonitor() {
           渲染: {metrics.renderTime.toFixed(0)}ms
         </Badge>
         <Badge variant="outline" className="text-white border-white/30">
-          缓存命中率: {cacheHitRate}%
+          活跃请求: {isFetching}
         </Badge>
-      </div>
-      <div className="text-gray-400 text-xs">
-        请求: {metrics.totalRequests} | 缓存: {metrics.cacheHits}
+        <Badge variant="outline" className="text-white border-white/30">
+          累计网络请求: {metrics.totalFetches}
+        </Badge>
+        <Badge variant="outline" className="text-white border-white/30">
+          新鲜度: {freshRatio}% ({metrics.freshQueries}/{metrics.totalQueries})
+        </Badge>
       </div>
     </div>
   )

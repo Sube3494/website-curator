@@ -5,11 +5,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, getCurrentUserFromToken } from '@/lib/database'
 import { cookies } from 'next/headers'
+import { revalidateTag, unstable_cache } from 'next/cache'
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // 获取所有系统设置（任何认证用户都可以访问）
-    const settings = await db.getAllSystemSettings()
+    // 仅允许已认证用户访问（若需要匿名只读可再放宽）
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: '未登录' },
+        { status: 401 }
+      )
+    }
+
+    const getSettingsCached = unstable_cache(
+      async () => {
+        const s = await db.getAllSystemSettings()
+        return Array.isArray(s) ? s : []
+      },
+      ['settings'],
+      { revalidate: 300, tags: ['settings'] }
+    )
+    const settings = await getSettingsCached()
     
     // 格式化为前端需要的格式
     const formattedSettings = settings.map(setting => ({
@@ -81,6 +99,9 @@ export async function PUT(request: NextRequest) {
         key: setting.setting_key,
         value: setting.setting_value
       }
+
+      // 设置更新后，失效相关标签（若有）
+      try { revalidateTag('settings') } catch {}
 
       return NextResponse.json({
         success: true,
