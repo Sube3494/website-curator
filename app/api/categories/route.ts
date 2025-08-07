@@ -4,7 +4,7 @@
 // {{START MODIFICATIONS}}
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database' // 服务器端数据库连接
-import { unstable_cache, revalidateTag } from 'next/cache'
+import { unstable_cache } from 'next/cache'
 
 export async function GET(request: NextRequest) {
   try {

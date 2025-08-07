@@ -46,7 +46,7 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
                 settingsObj[key] = typeof value === 'string' 
                   ? JSON.parse(value) 
                   : value;
-              } catch (_parseError) {
+              } catch {
                 // 如果解析失败，使用原始值
                 const key = setting.key || setting.setting_key;
                 const value = setting.value || setting.setting_value;

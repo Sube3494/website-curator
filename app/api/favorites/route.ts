@@ -7,7 +7,7 @@ import { db, getCurrentUserFromToken } from '@/lib/database'
 import { cookies } from 'next/headers'
 import { unstable_cache, revalidateTag } from 'next/cache'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value

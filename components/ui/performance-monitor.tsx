@@ -23,7 +23,7 @@ export function PerformanceMonitor() {
   const [isVisible, setIsVisible] = useState(false)
   const queryClient = useQueryClient()
   const isFetching = useIsFetching()
-  const prevFetchStatuses = useRef<Map<string, string>>(new Map())
+  const _prevFetchStatuses = useRef<Map<string, string>>(new Map())
 
   useEffect(() => {
     const startTime = performance.now()

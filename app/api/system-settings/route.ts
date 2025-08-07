@@ -7,7 +7,7 @@ import { db, getCurrentUserFromToken } from '@/lib/database'
 import { cookies } from 'next/headers'
 import { revalidateTag, unstable_cache } from 'next/cache'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 仅允许已认证用户访问（若需要匿名只读可再放宽）
     const cookieStore = await cookies()

@@ -78,11 +78,6 @@ function AppContent() {
     }
   }, [user, showAuth])
 
-  // Show auth page if explicitly requested
-  if (showAuth) {
-    return <AuthPage />
-  }
-
   const renderPage = () => {
     switch (currentPage) {
       case "browse":
@@ -143,6 +138,8 @@ function AppContent() {
 
   // 依据页面预取关键查询，降低首屏与切页请求
   useEffect(() => {
+    if (!currentPage) return
+
     const prefetchBrowse = async () => {
       try {
         await queryClient.prefetchQuery({
@@ -186,6 +183,11 @@ function AppContent() {
       prefetchAdmin()
     }
   }, [currentPage, queryClient])
+
+  // Show auth page if explicitly requested
+  if (showAuth) {
+    return <AuthPage />
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
