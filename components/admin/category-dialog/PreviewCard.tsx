@@ -15,7 +15,17 @@ export function PreviewCard({ title = "预览", fromHex = "#10b981", toHex = "#0
     <div className={className}>
       <div className="rounded-2xl border bg-white/80 dark:bg-gray-800/80 p-4 shadow">
         <p className="text-sm font-medium mb-3 text-muted-foreground">{title}</p>
-        <div className="h-12 w-full rounded-full shadow-inner" style={{ background: `linear-gradient(90deg, ${fromHex}, ${toHex})` }} />
+      <div className="h-12 w-full rounded-full shadow-inner overflow-hidden">
+        <svg className="w-full h-full" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="previewcard-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={fromHex} />
+              <stop offset="100%" stopColor={toHex} />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="100" height="10" fill="url(#previewcard-grad)" rx="999" ry="999" />
+        </svg>
+      </div>
         <div className="mt-4 rounded-xl border bg-background p-4">
           <div className="text-sm font-semibold">{name || "分类名称"}</div>
           <p className="text-xs text-muted-foreground mt-1">将应用到浏览页的徽标、标签和筛选项。</p>

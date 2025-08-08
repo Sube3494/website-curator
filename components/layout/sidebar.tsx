@@ -199,7 +199,10 @@ export function Sidebar({
                     ? `bg-gradient-to-r ${colorInfo.className} text-white shadow-md`
                     : "hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-800 dark:hover:to-gray-700"
                     }`}
-                  style={selectedCategory === category ? colorInfo.style : undefined}
+                  // 将内联渐变背景通过伪元素覆盖，避免内联样式
+                  {...(selectedCategory === category && colorInfo.style
+                    ? { 'data-gradient': `${(colorInfo.style as any).background}` }
+                    : {})}
                   aria-current={selectedCategory === category ? 'true' : undefined}
                   aria-label={`选择分类 ${category}`}
                 >

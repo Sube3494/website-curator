@@ -85,7 +85,17 @@ export function CategoryDialog(props: CategoryDialogProps) {
         <div className="px-3 sm:px-5">
           <section className="rounded-xl border bg-white/80 dark:bg-gray-800/80 p-4 mb-5">
             <div className="flex items-center gap-4">
-              <div className="h-12 flex-1 rounded-full shadow-inner" style={{ background: `linear-gradient(90deg, ${previewFromHex}, ${previewToHex})` }} />
+              <div className="h-12 flex-1 rounded-full shadow-inner overflow-hidden">
+                <svg className="w-full h-full" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="preview-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor={previewFromHex || '#10b981'} />
+                      <stop offset="100%" stopColor={previewToHex || '#06b6d4'} />
+                    </linearGradient>
+                  </defs>
+                  <rect x="0" y="0" width="100" height="10" fill="url(#preview-grad)" rx="999" ry="999" />
+                </svg>
+              </div>
               <div className="text-xs sm:text-sm text-muted-foreground shrink-0 w-36">
                 {name || '分类名称'}
               </div>

@@ -1,11 +1,11 @@
 'use client'
 
 import { motion, type MotionProps } from 'framer-motion'
-import React from 'react'
+import React, { type JSX as ReactJSX } from 'react'
 import { useUiPreferences } from '@/lib/ui-preferences'
 
 interface FadeInProps extends MotionProps {
-  as?: keyof JSX.IntrinsicElements
+  as?: keyof ReactJSX.IntrinsicElements
   children?: React.ReactNode
 }
 

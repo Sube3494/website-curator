@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createElement } from "react"
+import { GradientBar } from "@/components/ui/gradient-bar"
 
 export interface ColorPreset {
   name: string
@@ -53,12 +54,8 @@ export function ColorPresetsPanel({ presets, isSelected, onSelect, className }: 
                   className={`p-2 rounded-lg border-2 transition-all duration-150 hover:scale-[1.01] active:scale-[0.99] pointer-coarse:p-4 ${
                     selected ? "border-orange-500 shadow-lg" : "border-gray-200 dark:border-gray-700"
                   }`}
-                  aria-pressed={selected ? "true" : "false"}
                 >
-                  <div
-                    className="h-8 sm:h-9 w-full rounded-full mb-1"
-                    style={{ background: `linear-gradient(to right, ${preset.fromHex}, ${preset.toHex})` }}
-                  />
+                  <GradientBar from={preset.fromHex} to={preset.toHex} className="h-8 sm:h-9 w-full rounded-full mb-1" />
                   <p className="text-[11px] sm:text-xs text-center leading-none mt-1">{preset.name}</p>
                 </button>
               )

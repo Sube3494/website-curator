@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { Search, Globe, ExternalLink, Tag, Calendar, Heart, LogIn, X, Hash, Plus, Filter } from "lucide-react"
+import { Search, ExternalLink, Tag, Calendar, Heart, LogIn, X, Hash, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { SimpleFavicon } from "@/components/ui/simple-favicon"
 import { WebsiteGridSkeleton } from "@/components/ui/website-card-skeleton"
 import { NoSearchResults, NoWebsites } from "@/components/ui/empty-state"
-import { NetworkError } from "@/components/ui/error-boundary"
+// import { NetworkError } from "@/components/ui/error-boundary"
 import { SubmitWebsiteDialog } from "./submit-website-dialog"
 import { Sidebar } from "@/components/layout/sidebar"
 import { FilterPanel } from "./filter-panel"
@@ -31,8 +31,8 @@ import { cn } from "@/lib/utils"
 import { StaggerList } from "@/components/ui/motion/stagger-list"
 import { toast } from "sonner"
 
-// 使用 Website 类型
-import type { Website } from "@/lib/db-client"
+// 使用类型
+import type { Website, Category } from "@/lib/db-types"
 
 // 默认颜色作为后备方案
 const defaultCategoryColors = {
@@ -56,13 +56,18 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 
   // 将系统设置数组转换为对象格式
+  type ClientSetting = { key: string; value: unknown; description?: string }
   const settings = useMemo(() => {
-    const settingsObj: Record<string, any> = {}
-    systemSettings.forEach(setting => {
-      settingsObj[setting.key] = setting.value
-    })
-    return settingsObj
+    const array = (systemSettings as Array<ClientSetting>) || []
+    const aggregated = array.reduce<Record<string, unknown>>((acc, setting) => {
+      acc[setting.key] = setting.value
+      return acc
+    }, {})
+    return aggregated
   }, [systemSettings])
+  const allowWebsiteSubmissionEnabled = Boolean(
+    (settings["allow_website_submission"] as { enabled?: boolean } | undefined)?.enabled,
+  )
 
   // 使用 React Query hooks
   const { data: approvedWebsites = [], isLoading: websitesLoading } = useApprovedWebsites()
@@ -99,11 +104,12 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   // 收集所有可用的标签
   useEffect(() => {
     if (approvedWebsites.length > 0) {
-      const tagMap = new Map<string, { name: string, count: number }>()
+      type TagLike = string | { id?: string; name?: string }
+      const tagMap = new Map<string, { name: string; count: number }>()
 
-      approvedWebsites.forEach(website => {
+      approvedWebsites.forEach((website: Website) => {
         if (website.tags && Array.isArray(website.tags)) {
-          website.tags.forEach(tag => {
+          website.tags.forEach((tag: TagLike) => {
             const tagId = typeof tag === 'string' ? tag : tag.id || tag.name
             const tagName = typeof tag === 'string' ? tag : tag.name
 
@@ -153,7 +159,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
   }, [searchQuery])
 
   // 合并分类数据
-  const categories = ["All", ...dbCategories.map(cat => cat.name)]
+  const categories = ["All", ...dbCategories.map((cat: Category | { name: string }) => (cat as any).name)]
 
   // 获取分类颜色的函数
   const getCategoryColor = (categoryName: string) => {
@@ -164,7 +170,10 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
       }
     }
 
-    const dbCategory = dbCategories.find(cat => cat.name === categoryName)
+    const dbCategory = dbCategories.find(
+      (cat: Category | { name: string; color_from?: string; color_to?: string }) =>
+        (cat as any).name === categoryName,
+    ) as (Category & { color_from?: string; color_to?: string }) | undefined
     if (dbCategory && dbCategory.color_from && dbCategory.color_to) {
       // 如果是十六进制颜色，使用内联样式
       if (dbCategory.color_from.startsWith('#') || dbCategory.color_to.startsWith('#')) {
@@ -190,27 +199,30 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
 
   // 根据筛选条件过滤网站
   const filteredWebsites = useMemo(() => {
-    return approvedWebsites.filter((website) => {
+    type TagLike = string | { id?: string; name?: string }
+    return approvedWebsites.filter((website: Website) => {
       // 匹配搜索查询
       const matchesSearch =
         website.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         website.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        (website.tags && website.tags.some((tag) => {
-          const tagName = typeof tag === 'string' ? tag : tag.name
-          return tagName && tagName.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-        }))
+        (website.tags &&
+          website.tags.some((tag: TagLike) => {
+            const tagName = typeof tag === 'string' ? tag : tag.name
+            return !!tagName && tagName.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+          }))
 
       // 匹配选中的分类
       const categoryName = website.category?.name || 'Unknown'
       const matchesCategory = selectedCategory === "All" || categoryName === selectedCategory
 
       // 匹配选中的标签
-      const matchesTags = selectedTags.length === 0 || (
-        website.tags && website.tags.some(tag => {
-          const tagId = typeof tag === 'string' ? tag : tag.id || tag.name
-          return selectedTags.includes(tagId)
-        })
-      )
+      const matchesTags =
+        selectedTags.length === 0 ||
+        (website.tags &&
+          website.tags.some((tag: TagLike) => {
+            const tagId = typeof tag === 'string' ? tag : tag.id || tag.name
+            return typeof tagId === 'string' && selectedTags.includes(tagId)
+          }))
 
       return matchesSearch && matchesCategory && matchesTags
     })
@@ -218,7 +230,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
 
   const getCategoryCount = (category: string) => {
     if (category === "All") return approvedWebsites.length
-    return approvedWebsites.filter((site) => site.category?.name === category).length
+    return approvedWebsites.filter((site: Website) => site.category?.name === category).length
   }
 
   // 检查是否已收藏的辅助函数
@@ -376,18 +388,18 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
                     <Tag className="h-3 w-3 text-emerald-600" />
-                    {(() => {
-                      const categoryName = typeof website.category === 'string' ? website.category : website.category?.name || 'Unknown'
-                      const colorInfo = getCategoryColor(categoryName)
-                      return (
-                        <Badge
-                          className={`bg-gradient-to-r ${colorInfo.className} text-white text-xs px-2 py-0.5 border-0`}
-                          style={colorInfo.style}
-                        >
-                          {categoryName}
-                        </Badge>
-                      )
-                    })()}
+                      {(() => {
+                        const categoryName = typeof website.category === 'string' ? website.category : website.category?.name || 'Unknown'
+                        const colorInfo = getCategoryColor(categoryName)
+                        return (
+                          <Badge
+                            className={`bg-gradient-to-r ${colorInfo.className} text-white text-xs px-2 py-0.5 border-0`}
+                            style={colorInfo.style}
+                          >
+                            {categoryName}
+                          </Badge>
+                        )
+                      })()}
                   </div>
 
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -558,7 +570,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* 标题部分 - 居中 */}
         <div className="text-center mb-6">
-          <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-cyan-600 via-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent animate-wave-gradient mb-2">
+              <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-emerald-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent animate-wave-gradient mb-2">
             发现优秀网站
           </h2>
           <p className="text-muted-foreground text-sm sm:text-base">
@@ -609,7 +621,7 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
           {/* 提交网站按钮 */}
           {user ? (
             // 用户已登录，根据设置显示提交按钮或登录按钮
-            settings.allow_website_submission?.enabled ? (
+            allowWebsiteSubmissionEnabled ? (
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
@@ -696,8 +708,8 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
               <StaggerList
                 items={filteredWebsites}
                 className={getViewModeClasses()}
-                getKey={(w) => w.id}
-                renderItem={(w) => renderWebsiteCard(w)}
+                getKey={(w: Website) => w.id}
+                renderItem={(w: Website) => renderWebsiteCard(w)}
               />
             )}
           </main>

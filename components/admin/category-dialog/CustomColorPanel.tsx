@@ -32,10 +32,17 @@ export function CustomColorPanel({ title = "自定义颜色", isCustom, fromHex,
             isCustom ? "border-orange-500 shadow-lg bg-orange-50 dark:bg-orange-900/20" : "border-gray-200 dark:border-gray-700 hover:border-orange-300"
           }`}
         >
-          <div
-            className="h-6 w-full rounded mb-2"
-            style={{ background: `linear-gradient(to right, ${fromHex || "#f97316"}, ${toHex || "#f59e0b"})` }}
-          />
+          <div className="h-6 w-full rounded mb-2 overflow-hidden">
+          <svg className="w-full h-full" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="custom-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={fromHex || '#f97316'} />
+                <stop offset="100%" stopColor={toHex || '#f59e0b'} />
+              </linearGradient>
+            </defs>
+            <rect x="0" y="0" width="100" height="10" fill="url(#custom-grad)" rx="999" ry="999" />
+          </svg>
+        </div>
           <p className="text-sm font-medium">{isCustom ? "自定义颜色 (已选择)" : "点击选择自定义颜色"}</p>
         </button>
 
