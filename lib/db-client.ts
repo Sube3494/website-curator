@@ -49,6 +49,7 @@ export const db = {
     const response = await fetch('/api/websites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify(websiteData)
     })
     if (!response.ok) throw new Error('创建网站失败')
@@ -60,6 +61,7 @@ export const db = {
     const response = await fetch(`/api/websites/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify(updates)
     })
     if (!response.ok) throw new Error('更新网站失败')
@@ -69,7 +71,8 @@ export const db = {
   
   async deleteWebsite(id: string) {
     const response = await fetch(`/api/websites/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      credentials: 'include' // 确保发送认证cookies
     })
     if (!response.ok) throw new Error('删除网站失败')
     return true
@@ -94,6 +97,7 @@ export const db = {
     const response = await fetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify(categoryData)
     })
     if (!response.ok) throw new Error('创建分类失败')
@@ -105,6 +109,7 @@ export const db = {
     const response = await fetch(`/api/categories/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify(updates)
     })
     if (!response.ok) throw new Error('更新分类失败')
@@ -114,7 +119,8 @@ export const db = {
   
   async deleteCategory(id: string) {
     const response = await fetch(`/api/categories/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      credentials: 'include' // 确保发送认证cookies
     })
     if (!response.ok) throw new Error('删除分类失败')
     return true
@@ -133,6 +139,7 @@ export const db = {
     const response = await fetch('/api/favorites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify({ userId, websiteId })
     })
     if (!response.ok) throw new Error('添加收藏失败')
@@ -144,6 +151,7 @@ export const db = {
     const response = await fetch('/api/favorites', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify({ userId, websiteId })
     })
     if (!response.ok) throw new Error('删除收藏失败')
@@ -168,6 +176,7 @@ export const db = {
     const response = await fetch(`/api/system-settings/${key}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify({ value })
     })
     if (!response.ok) throw new Error('更新系统设置失败')
@@ -176,15 +185,29 @@ export const db = {
 
   // 用户相关方法
   async getAllUsers() {
-    const response = await fetch('/api/users')
-    if (!response.ok) throw new Error('获取所有用户失败')
+    const response = await fetch('/api/users', {
+      credentials: 'include' // 确保发送认证cookies
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(`获取所有用户失败: ${response.status} - ${errorData.message || '未知错误'}`)
+    }
+    
     const result = await response.json()
     return result.data || []
   },
 
   async getUser(id: string) {
-    const response = await fetch(`/api/users/${id}`)
-    if (!response.ok) throw new Error('获取用户失败')
+    const response = await fetch(`/api/users/${id}`, {
+      credentials: 'include' // 确保发送认证cookies
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(`获取用户失败: ${response.status} - ${errorData.message || '未知错误'}`)
+    }
+    
     const result = await response.json()
     return result.data
   },
@@ -193,9 +216,15 @@ export const db = {
     const response = await fetch(`/api/users/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 确保发送认证cookies
       body: JSON.stringify(updates)
     })
-    if (!response.ok) throw new Error('更新用户失败')
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(`更新用户失败: ${response.status} - ${errorData.message || '未知错误'}`)
+    }
+    
     const result = await response.json()
     return result.data
   }

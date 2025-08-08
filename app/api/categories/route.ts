@@ -4,7 +4,7 @@
 // {{START MODIFICATIONS}}
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database' // 服务器端数据库连接
-import { unstable_cache } from 'next/cache'
+import { unstable_cache, revalidateTag } from 'next/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +78,11 @@ export async function POST(request: NextRequest) {
     // TODO: 添加管理员权限检查
     
     const newCategory = await db.createCategory(categoryData)
+    try {
+      // 使分类相关缓存失效，确保客户端下一次获取的是最新数据
+      revalidateTag('categories')
+      revalidateTag('categories-usage')
+    } catch {}
     
     return NextResponse.json({
       success: true,

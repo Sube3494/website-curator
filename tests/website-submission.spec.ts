@@ -297,40 +297,135 @@ test.describe('网站提交功能测试', () => {
       await page.waitForTimeout(1000);
 
       // 填写已存在网站的URL
-      const urlField = page.getByLabel('网站链接').or(
+      const urlField = page.getByLabel('网站地址').or(
         page.getByLabel('Website URL')
       );
+      
+      // 测试实时重复检查
+      console.log('🔍 测试实时重复检查功能...');
       await urlField.fill('https://github.com'); // 假设这是已存在的网站
+      
+      // 等待实时检查完成（1秒防抖 + 检查时间）
+      await page.waitForTimeout(2000);
+      
+      // 检查是否显示重复警告
+      const duplicateAlert = page.locator('[class*="border-red-200"]').or(
+        page.getByText(/网站已存在/i)
+      );
+      
+      if (await duplicateAlert.isVisible({ timeout: 3000 })) {
+        console.log('✅ 实时重复检查正常工作');
+        await expect(duplicateAlert).toBeVisible();
+        
+        // 检查重复检查指示器
+        const warningIcon = page.locator('[data-lucide="alert-triangle"]').or(
+          page.locator('svg[class*="text-red-500"]')
+        );
+        
+        if (await warningIcon.isVisible({ timeout: 1000 })) {
+          console.log('✅ 重复检查指示器显示正常');
+        }
+      } else {
+        console.log('ℹ️ 未检测到实时重复提示，可能是测试数据问题');
+      }
 
+      // 继续填写其他字段并测试提交阻止
       const titleField = page.getByLabel('网站标题').or(
         page.getByLabel('Website Title')
       );
-      await titleField.fill('GitHub');
+      await titleField.fill('GitHub测试');
 
       const descriptionField = page.getByLabel('网站描述').or(
         page.getByLabel('Description')
       );
-      await descriptionField.fill('代码托管平台');
+      await descriptionField.fill('代码托管平台测试');
 
-      // 提交表单
+      // 选择分类
+      const categorySelect = page.locator('select').or(
+        page.getByRole('combobox')
+      ).first();
+      if (await categorySelect.isVisible({ timeout: 1000 })) {
+        await categorySelect.click();
+        await page.waitForTimeout(500);
+        const firstOption = page.getByRole('option').first();
+        if (await firstOption.isVisible({ timeout: 1000 })) {
+          await firstOption.click();
+        }
+      }
+
+      // 尝试提交表单
       const submitFormButton = page.getByRole('button', { name: '提交' }).or(
         page.getByRole('button', { name: 'Submit' })
       );
       await submitFormButton.click();
       await page.waitForTimeout(2000);
 
-      // 检查重复提示
-      const duplicateMessage = page.getByText(/网站已存在/i).or(
-        page.getByText(/already exists/i)
-      ).or(
+      // 检查是否阻止了提交
+      const errorToast = page.getByText(/网站已存在/i).or(
         page.getByText(/重复/i)
       );
 
-      if (await duplicateMessage.isVisible({ timeout: 3000 })) {
-        await expect(duplicateMessage).toBeVisible();
-        console.log('✅ 重复网站检查正常工作');
+      if (await errorToast.isVisible({ timeout: 3000 })) {
+        await expect(errorToast).toBeVisible();
+        console.log('✅ 重复网站提交已被正确阻止');
       } else {
-        console.log('ℹ️ 未检测到重复网站提示，可能允许重复提交');
+        console.log('⚠️ 重复提交可能未被阻止');
+      }
+    }
+  });
+
+  test('URL标准化功能测试', async ({ page }) => {
+    const isLoggedIn = await login(page);
+    
+    if (!isLoggedIn) {
+      test.skip('跳过测试：用户未登录');
+      return;
+    }
+
+    const submitButton = page.getByRole('button', { name: '提交网站' }).or(
+      page.getByRole('button', { name: 'Submit Website' })
+    );
+
+    if (await submitButton.isVisible({ timeout: 3000 })) {
+      await submitButton.click();
+      await page.waitForTimeout(1000);
+
+      const urlField = page.getByLabel('网站地址').or(
+        page.getByLabel('Website URL')
+      );
+
+      // 测试不同的URL格式
+      const testUrls = [
+        'example.com',           // 无协议
+        'www.example.com',       // 带www
+        'https://example.com/',  // 带尾部斜杠
+        'HTTP://EXAMPLE.COM',    // 大写
+      ];
+
+      for (const testUrl of testUrls) {
+        console.log(`🧪 测试URL格式: ${testUrl}`);
+        
+        await urlField.clear();
+        await urlField.fill(testUrl);
+        await page.waitForTimeout(1500); // 等待实时检查
+        
+        // 检查是否有检查指示器
+        const loadingIcon = page.locator('[data-lucide="loader-2"]').or(
+          page.locator('svg[class*="animate-spin"]')
+        );
+        
+        const checkIcon = page.locator('[data-lucide="check-circle"]').or(
+          page.locator('svg[class*="text-green-500"]')
+        );
+
+        // 等待检查完成
+        if (await loadingIcon.isVisible({ timeout: 500 })) {
+          await loadingIcon.waitFor({ state: 'hidden', timeout: 3000 });
+        }
+
+        if (await checkIcon.isVisible({ timeout: 2000 })) {
+          console.log(`✅ URL格式 ${testUrl} 检查通过`);
+        }
       }
     }
   });

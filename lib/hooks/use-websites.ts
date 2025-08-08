@@ -281,8 +281,9 @@ export function useAddCategory() {
         return [...old, newCategory].sort((a, b) => a.name.localeCompare(b.name))
       })
 
-      // 对于带使用统计的分类，重新获取真实数据而不是手动设置
+      // 触发两类数据的立即刷新，保证管理页即时可见
       queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
+      queryClient.invalidateQueries({ queryKey: websiteKeys.categories() })
     },
     onError: () => {
       // 发生错误时重新获取数据
@@ -353,20 +354,36 @@ export function useDeleteCategory() {
 
   return useMutation({
     mutationFn: (id: string) => db.deleteCategory(id),
-    onSuccess: () => {
-      // 删除成功后，重新获取所有相关数据以确保同步
-      // 不进行乐观更新，因为删除操作会影响网站数量统计
-      queryClient.invalidateQueries({ queryKey: websiteKeys.categories() })
-      queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
-      queryClient.invalidateQueries({ queryKey: websiteKeys.allWebsites() })
-      queryClient.invalidateQueries({ queryKey: websiteKeys.approved() })
+    onMutate: async (id) => {
+      // 取消任何进行中的重新获取
+      await queryClient.cancelQueries({ queryKey: websiteKeys.categoriesWithUsage() })
+      
+      // 保存当前状态以便回滚
+      const previousCategories = queryClient.getQueryData(websiteKeys.categoriesWithUsage())
+      
+      // 乐观更新 UI
+      queryClient.setQueryData(
+        websiteKeys.categoriesWithUsage(),
+        (old: any[] | undefined) => old ? old.filter(cat => cat.id !== id) : []
+      )
+      
+      return { previousCategories }
     },
-    onError: () => {
-      // 发生错误时重新获取数据
-      queryClient.invalidateQueries({ queryKey: websiteKeys.categories() })
+    onError: (err, id, context) => {
+      // 出错时回滚
+      if (context?.previousCategories) {
+        queryClient.setQueryData(
+          websiteKeys.categoriesWithUsage(),
+          context.previousCategories
+        )
+      }
+      // 重新获取所需数据
       queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
-      queryClient.invalidateQueries({ queryKey: websiteKeys.allWebsites() })
-      queryClient.invalidateQueries({ queryKey: websiteKeys.approved() })
+    },
+    onSuccess: () => {
+      // 成功后只重新获取必要数据
+      queryClient.invalidateQueries({ queryKey: websiteKeys.categoriesWithUsage() })
+      queryClient.invalidateQueries({ queryKey: websiteKeys.categories() })
     },
   })
 }

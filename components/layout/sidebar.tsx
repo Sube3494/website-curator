@@ -63,16 +63,24 @@ export function Sidebar({
   // 折叠时的侧边栏
   if (isCollapsed) {
     return (
-      <aside className={cn("flex flex-col h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-lg border-0 overflow-hidden transition-all duration-300 w-16", className)}>
+      <aside
+        id="main-sidebar"
+        role="navigation"
+        aria-label="侧边栏导航"
+        className={cn("flex flex-col h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-lg border-0 overflow-hidden transition-all duration-300 w-16", className)}>
         {/* 展开按钮 */}
         {setIsCollapsed && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsCollapsed(false)}
-            className="m-2 p-0 h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="m-2 p-0 h-10 w-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="展开侧边栏"
+            aria-controls="main-sidebar"
+            aria-expanded={false}
+            title="展开侧边栏"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-5 w-5" />
           </Button>
         )}
 
@@ -81,18 +89,24 @@ export function Sidebar({
           <Button
             variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
-            className="p-0 h-8 w-8 rounded-full"
+            className="p-0 h-10 w-10 rounded-full"
             onClick={() => setViewMode("grid")}
+            aria-pressed={viewMode === "grid"}
+            aria-label="切换到网格视图"
+            title="网格视图"
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-5 w-5" />
           </Button>
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
-            className="p-0 h-8 w-8 rounded-full"
+            className="p-0 h-10 w-10 rounded-full"
             onClick={() => setViewMode("list")}
+            aria-pressed={viewMode === "list"}
+            aria-label="切换到列表视图"
+            title="列表视图"
           >
-            <LayoutList className="h-4 w-4" />
+            <LayoutList className="h-5 w-5" />
           </Button>
         </div>
 
@@ -103,7 +117,11 @@ export function Sidebar({
 
   // 展开的侧边栏
   return (
-    <aside className={cn("flex flex-col h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-lg border-0 overflow-hidden transition-all duration-300 w-72", className)}>
+    <aside
+      id="main-sidebar"
+      role="navigation"
+      aria-label="侧边栏导航"
+      className={cn("flex flex-col h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-lg border-0 overflow-hidden transition-all duration-300 w-72", className)}>
       {/* 顶部区域：搜索和折叠按钮 */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-700">
         <div className="relative flex-1">
@@ -112,7 +130,8 @@ export function Sidebar({
             placeholder="搜索网站..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-9 bg-white/80 dark:bg-gray-800/80 border-0 shadow-sm"
+            className="pl-8 h-10 bg-white/80 dark:bg-gray-800/80 border-0 shadow-sm"
+            aria-label="搜索网站"
           />
         </div>
         {setIsCollapsed && (
@@ -120,9 +139,13 @@ export function Sidebar({
             variant="ghost"
             size="sm"
             onClick={() => setIsCollapsed(true)}
-            className="ml-2 p-0 h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="ml-2 p-0 h-10 w-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="折叠侧边栏"
+            aria-controls="main-sidebar"
+            aria-expanded={true}
+            title="折叠侧边栏"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </Button>
         )}
       </div>
@@ -134,18 +157,24 @@ export function Sidebar({
           <Button
             variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-10 w-10 p-0"
             onClick={() => setViewMode("grid")}
+            aria-pressed={viewMode === "grid"}
+            aria-label="切换到网格视图"
+            title="网格视图"
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-5 w-5" />
           </Button>
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-10 w-10 p-0"
             onClick={() => setViewMode("list")}
+            aria-pressed={viewMode === "list"}
+            aria-label="切换到列表视图"
+            title="列表视图"
           >
-            <LayoutList className="h-4 w-4" />
+            <LayoutList className="h-5 w-5" />
           </Button>
         </div>
       </div>
@@ -166,16 +195,19 @@ export function Sidebar({
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-all duration-200 hover:scale-[1.02] ${selectedCategory === category
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 min-h-10 text-left text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:scale-[1.02] ${selectedCategory === category
                     ? `bg-gradient-to-r ${colorInfo.className} text-white shadow-md`
                     : "hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-800 dark:hover:to-gray-700"
                     }`}
                   style={selectedCategory === category ? colorInfo.style : undefined}
+                  aria-current={selectedCategory === category ? 'true' : undefined}
+                  aria-label={`选择分类 ${category}`}
                 >
                   <span className="font-medium">{category}</span>
                   <Badge
                     variant="secondary"
                     className={`ml-2 ${selectedCategory === category ? "bg-white/20 text-white" : ""}`}
+                    aria-label={`${category} 数量`}
                   >
                     {getCategoryCount(category)}
                   </Badge>

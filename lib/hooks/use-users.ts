@@ -14,15 +14,23 @@ export function useAllUsers() {
   return useQuery({
     queryKey: userKeys.allUsers(),
     queryFn: async () => {
-      const response = await db.getAllUsers()
-      // 处理 API 返回 {success, data} 格式
-      if (response && typeof response === 'object' && 'data' in response) {
-        return response.data || []
+      try {
+        const response = await db.getAllUsers()
+        
+        // 直接返回数据，因为 db.getAllUsers() 已经处理了 {success, data} 格式
+        return response || []
+      } catch (error) {
+        console.error('获取用户数据失败:', error)
+        throw error
       }
-      return response || []
     },
-    staleTime: 5 * 60 * 1000, // 5分钟
-    gcTime: 10 * 60 * 1000, // 10分钟
+    staleTime: 1 * 60 * 1000, // 减少到1分钟，提高数据新鲜度
+    gcTime: 5 * 60 * 1000, // 减少到5分钟
+    retry: (failureCount, _error: any) => {
+      return failureCount < 3
+    },
+    refetchOnWindowFocus: true, // 窗口聚焦时重新获取
+    refetchOnMount: true, // 组件挂载时重新获取
   })
 }
 
@@ -62,21 +70,7 @@ export function useUpdateUser() {
   })
 }
 
-// 创建用户
-export function useCreateUser() {
-  const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: (user: Omit<User, 'id' | 'created_at' | 'updated_at'>) =>
-      db.createUser(user),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.allUsers() })
-    },
-    onError: (error) => {
-      console.error('Error creating user:', error)
-    },
-  })
-}
 
 // 更新用户状态
 export function useUpdateUserStatus() {

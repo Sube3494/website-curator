@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { useIsFetching, useQueryClient } from "@tanstack/react-query"
+import { useGlobalPageTransition } from "@/lib/hooks/use-page-transition"
+import { getPreloadStats } from "@/lib/utils/component-preloader"
+import { getOptimizationRecommendations } from "@/lib/utils/transition-optimizer"
 
 interface PerformanceMetrics {
   loadTime: number
@@ -10,6 +13,10 @@ interface PerformanceMetrics {
   totalFetches: number
   freshQueries: number
   totalQueries: number
+  // 新增页面切换相关指标
+  isTransitioning: boolean
+  preloadedComponents: number
+  optimizationIssues: number
 }
 
 export function PerformanceMonitor() {
@@ -19,11 +26,17 @@ export function PerformanceMonitor() {
     totalFetches: 0,
     freshQueries: 0,
     totalQueries: 0,
+    isTransitioning: false,
+    preloadedComponents: 0,
+    optimizationIssues: 0,
   })
   const [isVisible, setIsVisible] = useState(false)
   const queryClient = useQueryClient()
   const isFetching = useIsFetching()
   const _prevFetchStatuses = useRef<Map<string, string>>(new Map())
+  
+  // 页面切换状态监控
+  const { isTransitioning } = useGlobalPageTransition()
 
   useEffect(() => {
     const startTime = performance.now()
@@ -65,7 +78,23 @@ export function PerformanceMonitor() {
           const isFresh = staleTime === Infinity || (now - updatedAt < staleTime)
           if (isFresh) fresh += 1
         }
-        setMetrics(prev => ({ ...prev, freshQueries: fresh, totalQueries: total, totalFetches }))
+
+        // 获取预加载统计
+        const preloadStats = getPreloadStats()
+        const preloadedComponents = preloadStats.valid
+
+        // 获取优化建议数量
+        const optimizationIssues = getOptimizationRecommendations().length
+
+        setMetrics(prev => ({ 
+          ...prev, 
+          freshQueries: fresh, 
+          totalQueries: total, 
+          totalFetches,
+          isTransitioning,
+          preloadedComponents,
+          optimizationIssues
+        }))
       } catch {}
     }
 
@@ -110,6 +139,17 @@ export function PerformanceMonitor() {
         <Badge variant="outline" className="text-white border-white/30">
           新鲜度: {freshRatio}% ({metrics.freshQueries}/{metrics.totalQueries})
         </Badge>
+        <Badge variant="outline" className={`border-white/30 ${metrics.isTransitioning ? 'text-yellow-300' : 'text-white'}`}>
+          切换: {metrics.isTransitioning ? '进行中' : '就绪'}
+        </Badge>
+        <Badge variant="outline" className="text-white border-white/30">
+          预加载: {metrics.preloadedComponents}
+        </Badge>
+        {metrics.optimizationIssues > 0 && (
+          <Badge variant="outline" className="text-orange-300 border-orange-300/30">
+            优化建议: {metrics.optimizationIssues}
+          </Badge>
+        )}
       </div>
     </div>
   )

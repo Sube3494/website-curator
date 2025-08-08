@@ -88,8 +88,53 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('创建网站失败:', error)
+    
+    // 增强的错误处理
+    if (error instanceof Error) {
+      // 重复网站错误
+      if (error.message.includes('网站已存在')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: error.message,
+            errorType: 'DUPLICATE_WEBSITE'
+          },
+          { status: 409 } // Conflict
+        )
+      }
+      
+      // URL验证错误
+      if (error.message.includes('无效的URL格式')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: error.message,
+            errorType: 'INVALID_URL'
+          },
+          { status: 400 } // Bad Request
+        )
+      }
+      
+      // 验证错误
+      if (error.name === 'ValidationError') {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: error.message,
+            errorType: 'VALIDATION_ERROR'
+          },
+          { status: 400 }
+        )
+      }
+    }
+
+    // 通用服务器错误
     return NextResponse.json(
-      { success: false, message: '创建网站失败' },
+      { 
+        success: false, 
+        message: '创建网站失败，请稍后重试',
+        errorType: 'SERVER_ERROR'
+      },
       { status: 500 }
     )
   }

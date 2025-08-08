@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, createElement } from "react"
 
 // 简单的防抖函数
 function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
@@ -45,6 +45,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { CategoryDrawer } from "@/components/admin/category-dialog/CategoryDrawer"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
@@ -60,7 +61,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useSupabaseAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context"
 import {
   useAllWebsites,
   useApprovedWebsites,
@@ -75,14 +76,13 @@ import {
 } from "@/lib/hooks/use-websites"
 import {
   useAllUsers,
-  useUpdateUser,
   useUpdateUserStatus,
   useUpdateUserRole,
   useUpdateUserTrusted,
   useRefreshUsers
 } from "@/lib/hooks/use-users"
 import { SystemSettingsPage } from "@/components/settings/system-settings-page"
-import type { Website, Category, CategoryWithUsage, User } from "@/lib/db-types"
+import type { Category, CategoryWithUsage, User } from "@/lib/db-types"
 import {
   WebsiteTableSkeleton,
   CategoryTableSkeleton,
@@ -101,7 +101,6 @@ import { toast } from "sonner"
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -164,7 +163,7 @@ interface Website {
 
 
 
-const mockWebsites: Website[] = [
+const _mockWebsites: Website[] = [
   {
     id: "1",
     title: "GitHub",
@@ -212,7 +211,7 @@ const mockWebsites: Website[] = [
 
 
 export function AdminDashboard() {
-  const { user } = useSupabaseAuth()
+  const { user } = useAuth()
 
   // 标签页状态管理
   const [activeTab, setActiveTab] = useState("websites")
@@ -262,12 +261,13 @@ export function AdminDashboard() {
   const deleteCategoryMutation = useDeleteCategory()
 
   // 用户管理相关 hooks
-  const { data: userData = [], isLoading: usersLoading } = useAllUsers()
-  const supabaseUsers = Array.isArray(userData) ? userData : []
+  const { data: userData = [], isLoading: usersLoading, error: usersError } = useAllUsers()
   const updateUserStatusMutation = useUpdateUserStatus()
   const updateUserRoleMutation = useUpdateUserRole()
   const updateUserTrustedMutation = useUpdateUserTrusted()
   const refreshUsers = useRefreshUsers()
+
+
 
   // 搜索和过滤状态
   const [searchQuery, setSearchQuery] = useState("")
@@ -309,8 +309,8 @@ export function AdminDashboard() {
   const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false)
   const [newCategory, setNewCategory] = useState({
     name: "",
-    color_from: "orange-500",
-    color_to: "amber-500",
+    color_from: "#f97316",  // 直接使用十六进制值
+    color_to: "#f59e0b",    // 直接使用十六进制值
     custom_from_hex: "#f97316",
     custom_to_hex: "#f59e0b",
     is_custom: false,
@@ -377,17 +377,17 @@ export function AdminDashboard() {
   // 同步本地状态
   useEffect(() => {
     if (newCategory.is_custom) {
-      setLocalFromColor(newCategory.custom_from_hex)
-      setLocalToColor(newCategory.custom_to_hex)
+      setLocalFromColor(newCategory.custom_from_hex || "#f97316")
+      setLocalToColor(newCategory.custom_to_hex || "#f59e0b")
     }
-  }, [newCategory.is_custom])
+  }, [newCategory.is_custom, newCategory.custom_from_hex, newCategory.custom_to_hex])
 
   useEffect(() => {
     if (editingCategory?.is_custom) {
-      setEditLocalFromColor(editingCategory.custom_from_hex || editingCategory.color_from)
-      setEditLocalToColor(editingCategory.custom_to_hex || editingCategory.color_to)
+      setEditLocalFromColor(editingCategory.custom_from_hex || editingCategory.color_from || "#f97316")
+      setEditLocalToColor(editingCategory.custom_to_hex || editingCategory.color_to || "#f59e0b")
     }
-  }, [editingCategory?.is_custom])
+  }, [editingCategory?.is_custom, editingCategory?.custom_from_hex, editingCategory?.custom_to_hex, editingCategory?.color_from, editingCategory?.color_to])
 
   // 搜索防抖
   useEffect(() => {
@@ -471,7 +471,7 @@ export function AdminDashboard() {
   }, [categoriesWithUsage, debouncedCategorySearchQuery])
 
   const filteredUsers = useMemo(() => {
-    return supabaseUsers.filter((user) => {
+    return userData.filter((user) => {
       const query = debouncedUserSearchQuery.toLowerCase()
       return (
         user.name.toLowerCase().includes(query) ||
@@ -479,7 +479,7 @@ export function AdminDashboard() {
         user.role.toLowerCase().includes(query)
       )
     })
-  }, [supabaseUsers, debouncedUserSearchQuery])
+  }, [userData, debouncedUserSearchQuery])
 
   // 计算分页后的数据
   const paginatedWebsites = useMemo(() => {
@@ -759,6 +759,23 @@ export function AdminDashboard() {
     }
 
     try {
+      // 管理员添加前先检查重复
+      const checkResponse = await fetch(`/api/websites/check-duplicate?url=${encodeURIComponent(newWebsite.url.trim())}`)
+      const checkData = await checkResponse.json()
+
+      if (checkData.isDuplicate) {
+        const confirmOverride = window.confirm(
+          `网站已存在：${checkData.existingWebsite.title}\n\n点击"确定"强制添加（不推荐），点击"取消"停止添加。`
+        )
+        
+        if (!confirmOverride) {
+          toast.info('已取消添加重复网站')
+          return
+        } else {
+          toast.warning('强制添加重复网站，请谨慎处理')
+        }
+      }
+
       const websiteData = {
         title: newWebsite.title.trim(),
         url: newWebsite.url.trim(),
@@ -775,7 +792,19 @@ export function AdminDashboard() {
       setIsAddDialogOpen(false)
     } catch (error) {
       console.error('Error adding website:', error)
-      toast.error('添加网站失败，请重试')
+      
+      // 更详细的错误处理
+      if (error instanceof Error) {
+        if (error.message.includes('网站已存在')) {
+          toast.error(`添加失败：${error.message}`)
+        } else if (error.message.includes('无效的URL')) {
+          toast.error('URL格式无效，请检查后重试')
+        } else {
+          toast.error(`添加网站失败：${error.message}`)
+        }
+      } else {
+        toast.error('添加网站失败，请重试')
+      }
     }
   }, [newWebsite, addWebsiteMutation, user])
 
@@ -869,28 +898,43 @@ export function AdminDashboard() {
   }, [])
 
   // 颜色处理函数
-  const hexToTailwindClass = useCallback((hex: string) => {
+  const _hexToTailwindClass = useCallback((hex: string) => {
     // 简化的 hex 到 tailwind 类名转换
     // 在实际应用中，我们直接使用 hex 值作为 CSS 变量
     return hex
   }, [])
 
-  const getColorStyle = useCallback((fromColor: string, toColor: string, isCustom: boolean, customFromHex?: string, customToHex?: string) => {
+  const _getColorStyle = useCallback((fromColor: string, toColor: string, isCustom: boolean, customFromHex?: string, customToHex?: string) => {
     if (isCustom && customFromHex && customToHex) {
       return {
         background: `linear-gradient(to right, ${customFromHex}, ${customToHex})`
       }
     }
     
-    if (fromColor && toColor) {
-      if (fromColor.startsWith('#') || toColor.startsWith('#')) {
-        return {
-          background: `linear-gradient(to right, ${fromColor}, ${toColor})`
+    // 从 COLOR_PRESETS 中查找匹配的预设
+    const findPreset = () => {
+      for (const group of Object.values(COLOR_PRESETS)) {
+        for (const preset of group) {
+          if (preset.from === fromColor && preset.to === toColor) {
+            return preset
+          }
         }
       }
+      return null
+    }
+    
+    const preset = findPreset()
+    if (preset) {
+      // 使用预设的十六进制值
       return {
-        // 使用内联样式而非动态类名
-        background: `linear-gradient(to right, var(--${fromColor}, #f97316), var(--${toColor}, #f59e0b))`
+        background: `linear-gradient(to right, ${preset.fromHex}, ${preset.toHex})`
+      }
+    }
+    
+    // 如果是十六进制值，直接使用
+    if (fromColor?.startsWith('#') && toColor?.startsWith('#')) {
+      return {
+        background: `linear-gradient(to right, ${fromColor}, ${toColor})`
       }
     }
     
@@ -904,16 +948,54 @@ export function AdminDashboard() {
   const handleAddCategory = useCallback(async () => {
     if (newCategory.name.trim()) {
       try {
+        // 确保使用十六进制颜色值
+        let colorFrom, colorTo;
+        
+        if (newCategory.is_custom) {
+          // 自定义颜色模式
+          colorFrom = newCategory.custom_from_hex;
+          colorTo = newCategory.custom_to_hex;
+        } else {
+          // 预设颜色模式
+          const findPreset = () => {
+            for (const group of Object.values(COLOR_PRESETS)) {
+              for (const preset of group) {
+                if ((preset.from === newCategory.color_from && preset.to === newCategory.color_to) ||
+                    (preset.fromHex === newCategory.color_from && preset.toHex === newCategory.color_to)) {
+                  return preset;
+                }
+              }
+            }
+            return null;
+          };
+          
+          const preset = findPreset();
+          if (preset) {
+            colorFrom = preset.fromHex;
+            colorTo = preset.toHex;
+          } else if (newCategory.color_from.startsWith('#') && 
+                     newCategory.color_to.startsWith('#')) {
+            // 如果已经是十六进制值，则直接使用
+            colorFrom = newCategory.color_from;
+            colorTo = newCategory.color_to;
+          } else {
+            // 如果找不到匹配的预设且不是十六进制值，则使用自定义十六进制值
+            colorFrom = newCategory.custom_from_hex;
+            colorTo = newCategory.custom_to_hex;
+          }
+        }
+        
         await addCategoryMutation.mutateAsync({
           name: newCategory.name.trim(),
-          color_from: newCategory.is_custom ? newCategory.custom_from_hex : newCategory.color_from,
-          color_to: newCategory.is_custom ? newCategory.custom_to_hex : newCategory.color_to,
+          color_from: colorFrom,
+          color_to: colorTo,
         })
+        
         toast.success(`分类 "${newCategory.name.trim()}" 添加成功！`)
         setNewCategory({
           name: "",
-          color_from: "orange-500",
-          color_to: "amber-500",
+          color_from: "#f97316", // 直接使用十六进制值
+          color_to: "#f59e0b",   // 直接使用十六进制值
           custom_from_hex: "#f97316",
           custom_to_hex: "#f59e0b",
           is_custom: false,
@@ -929,14 +1011,43 @@ export function AdminDashboard() {
   const handleEditCategory = useCallback(async () => {
     if (editingCategory && editingCategory.name.trim()) {
       try {
-        // 根据是否为自定义颜色决定保存的颜色格式
-        const colorFrom = editingCategory.is_custom
-          ? editingCategory.custom_from_hex
-          : editingCategory.color_from
-        const colorTo = editingCategory.is_custom
-          ? editingCategory.custom_to_hex
-          : editingCategory.color_to
-
+        // 确保使用十六进制颜色值进行保存
+        let colorFrom, colorTo;
+        
+        if (editingCategory.is_custom) {
+          // 自定义颜色模式 - 使用自定义十六进制值
+          colorFrom = editingCategory.custom_from_hex;
+          colorTo = editingCategory.custom_to_hex;
+        } else {
+          // 预设颜色模式 - 查找对应的十六进制值
+          const findPreset = () => {
+            for (const group of Object.values(COLOR_PRESETS)) {
+              for (const preset of group) {
+                if ((preset.from === editingCategory.color_from && preset.to === editingCategory.color_to) ||
+                    (preset.fromHex === editingCategory.color_from && preset.toHex === editingCategory.color_to)) {
+                  return preset;
+                }
+              }
+            }
+            return null;
+          };
+          
+          const preset = findPreset();
+          if (preset) {
+            colorFrom = preset.fromHex;
+            colorTo = preset.toHex;
+          } else if (editingCategory.color_from.startsWith('#') && 
+                     editingCategory.color_to.startsWith('#')) {
+            // 如果已经是十六进制值，则直接使用
+            colorFrom = editingCategory.color_from;
+            colorTo = editingCategory.color_to;
+          } else {
+            // 如果找不到匹配的预设且不是十六进制值，则使用自定义十六进制值
+            colorFrom = editingCategory.custom_from_hex || '#f97316';
+            colorTo = editingCategory.custom_to_hex || '#f59e0b';
+          }
+        }
+        
         const updateData = {
           id: editingCategory.id,
           updates: {
@@ -959,19 +1070,23 @@ export function AdminDashboard() {
   }, [editingCategory, updateCategoryMutation])
 
   const handleDeleteCategory = useCallback(async (id: string) => {
+    // 显示加载中状态
+    const toastId = toast.loading('正在删除分类...')
+
     try {
       // 立即添加到删除状态，显示视觉反馈
       setDeletingCategories(prev => new Set(prev).add(id))
 
-      // 立即显示删除成功的Toast，不等待API响应
-      toast.success('分类删除成功！')
-
       // 异步执行删除操作
-      deleteCategoryMutation.mutate(id, {
+      await deleteCategoryMutation.mutateAsync(id, {
+        onSuccess: () => {
+          // 成功时显示成功消息
+          toast.success('分类删除成功！', { id: toastId })
+        },
         onError: (error) => {
           console.error('Error deleting category:', error)
           // 如果删除失败，显示错误Toast并移除删除状态
-          toast.error('删除分类失败，请重试')
+          toast.error('删除分类失败，请重试', { id: toastId })
           setDeletingCategories(prev => {
             const newSet = new Set(prev)
             newSet.delete(id)
@@ -989,7 +1104,7 @@ export function AdminDashboard() {
       })
     } catch (error) {
       console.error('Error deleting category:', error)
-      toast.error('删除分类失败，请重试')
+      toast.error('删除分类失败，请重试', { id: toastId })
       setDeletingCategories(prev => {
         const newSet = new Set(prev)
         newSet.delete(id)
@@ -999,12 +1114,42 @@ export function AdminDashboard() {
   }, [deleteCategoryMutation])
 
   const handleEditCategoryClick = useCallback((category: CategoryWithUsage) => {
+    // 确定颜色是否为自定义颜色
     const isCustomColor = category.color_from.startsWith('#') || category.color_to.startsWith('#')
+    
+    // 查找匹配的预设
+    let fromHex = category.color_from
+    let toHex = category.color_to
+    
+    // 如果不是十六进制格式，尝试从预设中找到对应的十六进制值
+    if (!isCustomColor) {
+      const findPreset = () => {
+        for (const group of Object.values(COLOR_PRESETS)) {
+          for (const preset of group) {
+            if (preset.from === category.color_from && preset.to === category.color_to) {
+              return preset
+            }
+          }
+        }
+        return null
+      }
+      
+      const preset = findPreset()
+      if (preset) {
+        fromHex = preset.fromHex
+        toHex = preset.toHex
+      } else {
+        // 默认值
+        fromHex = "#f97316"
+        toHex = "#f59e0b"
+      }
+    }
+    
     setEditingCategory({
       ...category,
       is_custom: isCustomColor,
-      custom_from_hex: isCustomColor ? category.color_from : "#f97316",
-      custom_to_hex: isCustomColor ? category.color_to : "#f59e0b",
+      custom_from_hex: fromHex,
+      custom_to_hex: toHex,
     })
     setIsEditCategoryDialogOpen(true)
   }, [])
@@ -1044,8 +1189,8 @@ export function AdminDashboard() {
     totalWebsites: websites.length,
     pendingWebsites: websites.filter((w) => w.status === "pending").length,
     approvedWebsites: websites.filter((w) => w.status === "approved").length,
-    totalUsers: supabaseUsers.length,
-    activeUsers: supabaseUsers.filter((u) => u.status === "active").length,
+    totalUsers: userData.length,
+    activeUsers: userData.filter((u) => u.status === "active").length,
   }
   
   console.log('统计数据:', stats)
@@ -1128,7 +1273,7 @@ export function AdminDashboard() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
                 <div className={`p-2 rounded-lg bg-gradient-to-r ${stat.color}`}>
-                  <stat.icon className="h-4 w-4 text-white" />
+                  {createElement(stat.icon, { className: "h-4 w-4 text-white" })}
                 </div>
               </CardHeader>
               <CardContent>
@@ -1743,6 +1888,15 @@ export function AdminDashboard() {
                         </div>
                       )}
                     </div>
+                    {/* 添加分类按钮 */}
+                    <Button
+                      onClick={() => setIsAddCategoryDialogOpen(true)}
+                      className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      添加分类
+                    </Button>
+
                     {selectedCategories.size > 0 && (
                       <AlertDialog open={isBulkDeleteDialogOpen && bulkDeleteType === 'categories'} onOpenChange={setIsBulkDeleteDialogOpen}>
                         <AlertDialogTrigger asChild>
@@ -1785,157 +1939,53 @@ export function AdminDashboard() {
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
-                    <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
-                          <Plus className="h-4 w-4 mr-2" />
-                          添加分类
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[85vh] overflow-hidden rounded-xl">
-                        <DialogHeader>
-                          <DialogTitle>添加新分类</DialogTitle>
-                          <DialogDescription>
-                            创建新分类来组织网站
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1 px-1 custom-scrollbar">
-                          <div>
-                            <Label htmlFor="category-name">分类名称</Label>
-                            <Input
-                              id="category-name"
-                              value={newCategory.name}
-                              onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
-                              placeholder="输入分类名称"
-                            />
-                          </div>
-                          <div>
-                            <Label>颜色主题</Label>
-                            <div className="space-y-4 mt-2">
-                              {/* 预设颜色组合 */}
-                              {Object.entries(COLOR_PRESETS).map(([category, presets]) => (
-                                <div key={category}>
-                                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 capitalize">
-                                    {category === 'warm' ? '暖色调' :
-                                      category === 'cool' ? '冷色调' :
-                                        category === 'purple' ? '紫色系' :
-                                          category === 'neutral' ? '中性色' : '特殊色'}
-                                  </h4>
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {presets.map((preset) => (
-                                      <button
-                                        key={`${preset.from}-${preset.to}`}
-                                        type="button"
-                                        onClick={() => setNewCategory(prev => ({
+                    <CategoryDrawer
+                      open={isAddCategoryDialogOpen}
+                      onOpenChange={setIsAddCategoryDialogOpen}
+                      title="添加新分类"
+                      description="创建新分类来组织网站"
+                      name={newCategory.name}
+                      onNameChange={(v) => setNewCategory(prev => ({ ...prev, name: v }))}
+                      presets={COLOR_PRESETS as any}
+                      isCustom={!!newCategory.is_custom}
+                      onToggleCustom={() => setNewCategory(prev => ({ ...prev, is_custom: !prev.is_custom }))}
+                      fromHex={newCategory.is_custom ? (localFromColor || newCategory.custom_from_hex) : (newCategory.custom_from_hex)}
+                      toHex={newCategory.is_custom ? (localToColor || newCategory.custom_to_hex) : (newCategory.custom_to_hex)}
+                      onChangeFromHex={(hex) => handleColorChange('from', hex)}
+                      onChangeToHex={(hex) => handleColorChange('to', hex)}
+                      isPresetSelected={(p) => {
+                        if (newCategory.is_custom) return false;
+                        
+                        // 检查CSS变量名匹配
+                        const cssMatch = newCategory.color_from === p.from && newCategory.color_to === p.to;
+                        
+                        // 检查十六进制值匹配
+                        const hexMatch = (newCategory.color_from === p.fromHex && newCategory.color_to === p.toHex) ||
+                                       (newCategory.custom_from_hex === p.fromHex && newCategory.custom_to_hex === p.toHex);
+                        
+                        return cssMatch || hexMatch;
+                      }}
+                      onSelectPreset={(p) => setNewCategory(prev => ({
                                           ...prev,
-                                          color_from: preset.from,
-                                          color_to: preset.to,
-                                          custom_from_hex: preset.fromHex,
-                                          custom_to_hex: preset.toHex,
+                        color_from: p.fromHex,
+                        color_to: p.toHex,
+                        custom_from_hex: p.fromHex,
+                        custom_to_hex: p.toHex,
                                           is_custom: false,
                                         }))}
-                                        className={`p-2 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${!newCategory.is_custom && newCategory.color_from === preset.from && newCategory.color_to === preset.to
-                                          ? 'border-orange-500 shadow-lg'
-                                          : 'border-gray-200 dark:border-gray-700'
-                                          }`}
-                                      >
-                                        <div
-                                          className="h-4 w-full rounded mb-1"
-                                          style={{ background: `linear-gradient(to right, ${preset.fromHex}, ${preset.toHex})` }}
-                                        ></div>
-                                        <p className="text-xs text-center">{preset.name}</p>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* 自定义颜色选择器 */}
-                              <div>
-                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">自定义颜色</h4>
-                                <div className="space-y-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => setNewCategory(prev => ({ ...prev, is_custom: !prev.is_custom }))}
-                                    className={`w-full p-3 rounded-lg border-2 transition-all duration-200 ${newCategory.is_custom
-                                      ? 'border-orange-500 shadow-lg bg-orange-50 dark:bg-orange-900/20'
-                                      : 'border-gray-200 dark:border-gray-700 hover:border-orange-300'
-                                      }`}
-                                  >
-                                    <div
-                                      className="h-6 w-full rounded mb-2"
-                                      style={newCategory.is_custom ? {
-                                        background: `linear-gradient(to right, ${newCategory.custom_from_hex}, ${newCategory.custom_to_hex})`
-                                      } : {
-                                        background: 'linear-gradient(to right, #f97316, #f59e0b)'
-                                      }}
-                                    ></div>
-                                    <p className="text-sm font-medium">
-                                      {newCategory.is_custom ? '自定义颜色 (已选择)' : '点击选择自定义颜色'}
-                                    </p>
-                                  </button>
-
-                                  {newCategory.is_custom && (
-                                    <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                      <div>
-                                        <Label htmlFor="custom-from-color" className="text-xs">起始颜色</Label>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <input
-                                            id="custom-from-color"
-                                            type="color"
-                                            value={localFromColor}
-                                            onChange={(e) => handleColorChange('from', e.target.value)}
-                                            className="w-8 h-8 rounded cursor-pointer border-0"
-                                            title="选择起始颜色"
-                                          />
-                                          <Input
-                                            value={localFromColor}
-                                            onChange={(e) => handleColorChange('from', e.target.value)}
-                                            className="text-xs"
-                                            placeholder="#000000"
-                                          />
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <Label htmlFor="custom-to-color" className="text-xs">结束颜色</Label>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <input
-                                            id="custom-to-color"
-                                            type="color"
-                                            value={localToColor}
-                                            onChange={(e) => handleColorChange('to', e.target.value)}
-                                            className="w-8 h-8 rounded cursor-pointer border-0"
-                                            title="选择结束颜色"
-                                          />
-                                          <Input
-                                            value={localToColor}
-                                            onChange={(e) => handleColorChange('to', e.target.value)}
-                                            className="text-xs"
-                                            placeholder="#000000"
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setIsAddCategoryDialogOpen(false)}>
-                              取消
-                            </Button>
-                            <Button
-                              onClick={handleAddCategory}
-                              disabled={!newCategory.name.trim() || addCategoryMutation.isPending}
-                              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                            >
-                              {addCategoryMutation.isPending ? "添加中..." : "添加分类"}
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                      previewFromHex={newCategory.is_custom ? (localFromColor || newCategory.custom_from_hex || '#10b981') : (newCategory.custom_from_hex || '#10b981')}
+                      previewToHex={newCategory.is_custom ? (localToColor || newCategory.custom_to_hex || '#06b6d4') : (newCategory.custom_to_hex || '#06b6d4')}
+                      onCancel={() => setIsAddCategoryDialogOpen(false)}
+                      onSubmit={async () => {
+                        await handleAddCategory()
+                        // 强制刷新分类数据，避免极端情况下的缓存滞后
+                        try {
+                          const { QueryClient: _QueryClient } = await import('@tanstack/react-query')
+                        } catch {}
+                      }}
+                      submitDisabled={!newCategory.name.trim() || addCategoryMutation.isPending}
+                      submitLabel={addCategoryMutation.isPending ? '添加中...' : '添加分类'}
+                    />
                   </div>
                 </div>
               </CardHeader>
@@ -2216,153 +2266,49 @@ export function AdminDashboard() {
             </Card>
 
             {/* 编辑分类对话框 */}
-            <Dialog open={isEditCategoryDialogOpen} onOpenChange={handleEditCategoryDialogClose}>
-              <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto rounded-xl">
-                <DialogHeader>
-                  <DialogTitle>编辑分类</DialogTitle>
-                  <DialogDescription>
-                    更新分类名称和颜色主题
-                  </DialogDescription>
-                </DialogHeader>
-                {editingCategory && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="edit-category-name">分类名称</Label>
-                      <Input
-                        id="edit-category-name"
-                        value={editingCategory.name}
-                        onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
-                        placeholder="输入分类名称"
-                      />
-                    </div>
-                    <div>
-                      <Label>颜色主题</Label>
-                      <div className="space-y-4 mt-2 max-h-96 overflow-y-auto">
-                        {/* 预设颜色组合 */}
-                        {Object.entries(COLOR_PRESETS).map(([category, presets]) => (
-                          <div key={category}>
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 capitalize">
-                              {category === 'warm' ? '暖色调' :
-                                category === 'cool' ? '冷色调' :
-                                  category === 'purple' ? '紫色系' :
-                                    category === 'neutral' ? '中性色' : '特殊色'}
-                            </h4>
-                            <div className="grid grid-cols-3 gap-2">
-                              {presets.map((preset) => (
-                                <button
-                                  key={`edit-${preset.from}-${preset.to}`}
-                                  type="button"
-                                  onClick={() => setEditingCategory(prev => prev ? {
+            <CategoryDrawer
+              open={isEditCategoryDialogOpen}
+              onOpenChange={handleEditCategoryDialogClose}
+              title="编辑分类"
+              description="更新分类名称和颜色主题"
+              name={editingCategory?.name || ""}
+              onNameChange={(v) => setEditingCategory(prev => prev ? { ...prev, name: v } : prev)}
+              presets={COLOR_PRESETS as any}
+              isCustom={!!editingCategory?.is_custom}
+              onToggleCustom={() => setEditingCategory(prev => prev ? { ...prev, is_custom: !prev.is_custom } : prev)}
+              fromHex={editingCategory?.is_custom ? (editLocalFromColor || editingCategory?.custom_from_hex || editingCategory?.color_from) : (editingCategory?.custom_from_hex || editingCategory?.color_from)}
+              toHex={editingCategory?.is_custom ? (editLocalToColor || editingCategory?.custom_to_hex || editingCategory?.color_to) : (editingCategory?.custom_to_hex || editingCategory?.color_to)}
+              onChangeFromHex={(hex) => handleEditColorChange('from', hex)}
+              onChangeToHex={(hex) => handleEditColorChange('to', hex)}
+              isPresetSelected={(p) => {
+                if (!editingCategory || editingCategory.is_custom) return false
+                
+                // 检查CSS变量名匹配
+                const cssMatch = editingCategory.color_from === p.from && editingCategory.color_to === p.to
+                
+                // 检查十六进制值匹配
+                const hexMatch = (editingCategory.color_from === p.fromHex && editingCategory.color_to === p.toHex) ||
+                               (editingCategory.custom_from_hex === p.fromHex && editingCategory.custom_to_hex === p.toHex)
+                
+                return cssMatch || hexMatch
+              }}
+              onSelectPreset={(p) => setEditingCategory(prev => prev ? ({
                                     ...prev,
-                                    color_from: preset.from,
-                                    color_to: preset.to,
-                                    custom_from_hex: preset.fromHex,
-                                    custom_to_hex: preset.toHex,
+                color_from: p.fromHex, // 使用十六进制值而非CSS变量名
+                color_to: p.toHex,     // 使用十六进制值而非CSS变量名
+                custom_from_hex: p.fromHex,
+                custom_to_hex: p.toHex,
                                     is_custom: false,
-                                  } : null)}
-                                  className={`p-2 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${!editingCategory.is_custom && editingCategory.color_from === preset.from && editingCategory.color_to === preset.to
-                                    ? 'border-orange-500 shadow-lg'
-                                    : 'border-gray-200 dark:border-gray-700'
-                                    }`}
-                                >
-                                  <div
-                                    className="h-4 w-full rounded mb-1"
-                                    style={{ background: `linear-gradient(to right, ${preset.fromHex}, ${preset.toHex})` }}
-                                  ></div>
-                                  <p className="text-xs text-center">{preset.name}</p>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-
-                        {/* 自定义颜色选择器 */}
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">自定义颜色</h4>
-                          <div className="space-y-3">
-                            <button
-                              type="button"
-                              onClick={() => setEditingCategory(prev => prev ? { ...prev, is_custom: !prev.is_custom } : null)}
-                              className={`w-full p-3 rounded-lg border-2 transition-all duration-200 ${editingCategory.is_custom
-                                ? 'border-orange-500 shadow-lg bg-orange-50 dark:bg-orange-900/20'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-orange-300'
-                                }`}
-                            >
-                              <div
-                                className="h-6 w-full rounded mb-2"
-                                style={editingCategory.is_custom ? {
-                                  background: `linear-gradient(to right, ${editingCategory.custom_from_hex || editingCategory.color_from}, ${editingCategory.custom_to_hex || editingCategory.color_to})`
-                                } : {
-                                  background: 'linear-gradient(to right, #f97316, #f59e0b)'
-                                }}
-                              ></div>
-                              <p className="text-sm font-medium">
-                                {editingCategory.is_custom ? '自定义颜色 (已选择)' : '点击选择自定义颜色'}
-                              </p>
-                            </button>
-
-                            {editingCategory.is_custom && (
-                              <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                <div>
-                                  <Label htmlFor="edit-custom-from-color" className="text-xs">起始颜色</Label>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <input
-                                      id="edit-custom-from-color"
-                                      type="color"
-                                      value={editLocalFromColor}
-                                      onChange={(e) => handleEditColorChange('from', e.target.value)}
-                                      className="w-8 h-8 rounded cursor-pointer border-0"
-                                      title="选择起始颜色"
-                                    />
-                                    <Input
-                                      value={editLocalFromColor}
-                                      onChange={(e) => handleEditColorChange('from', e.target.value)}
-                                      className="text-xs"
-                                      placeholder="#000000"
-                                    />
-                                  </div>
-                                </div>
-                                <div>
-                                  <Label htmlFor="edit-custom-to-color" className="text-xs">结束颜色</Label>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <input
-                                      id="edit-custom-to-color"
-                                      type="color"
-                                      value={editLocalToColor}
-                                      onChange={(e) => handleEditColorChange('to', e.target.value)}
-                                      className="w-8 h-8 rounded cursor-pointer border-0"
-                                      title="选择结束颜色"
-                                    />
-                                    <Input
-                                      value={editLocalToColor}
-                                      onChange={(e) => handleEditColorChange('to', e.target.value)}
-                                      className="text-xs"
-                                      placeholder="#000000"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setIsEditCategoryDialogOpen(false)}>
-                        取消
-                      </Button>
-                      <Button
-                        onClick={handleEditCategory}
-                        disabled={!editingCategory.name.trim() || updateCategoryMutation.isPending}
-                        className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                      >
-                        {updateCategoryMutation.isPending ? "更新中..." : "更新分类"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
+              }) : prev)}
+              previewFromHex={editingCategory?.is_custom ? (editLocalFromColor || editingCategory?.custom_from_hex || editingCategory?.color_from || '#10b981') : (editingCategory?.custom_from_hex || editingCategory?.color_from || '#10b981')}
+              previewToHex={editingCategory?.is_custom ? (editLocalToColor || editingCategory?.custom_to_hex || editingCategory?.color_to || '#06b6d4') : (editingCategory?.custom_to_hex || editingCategory?.color_to || '#06b6d4')}
+              onCancel={() => setIsEditCategoryDialogOpen(false)}
+              onSubmit={async () => {
+                await handleEditCategory()
+              }}
+              submitDisabled={!editingCategory?.name?.trim() || updateCategoryMutation.isPending}
+              submitLabel={updateCategoryMutation.isPending ? '更新中...' : '更新分类'}
+            />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
@@ -2508,10 +2454,10 @@ export function AdminDashboard() {
                         ))
                       ) : filteredUsers.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            <div className="text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center py-8">
+                            <div className="flex flex-col items-center justify-center text-muted-foreground">
                               {debouncedUserSearchQuery ? (
-                                <div className="space-y-2">
+                                <div className="space-y-2 text-center">
                                   <p>没有找到匹配 "{debouncedUserSearchQuery}" 的用户</p>
                                   <Button
                                     variant="outline"
@@ -2522,8 +2468,60 @@ export function AdminDashboard() {
                                     清除搜索
                                   </Button>
                                 </div>
+                              ) : usersError ? (
+                                <div className="space-y-4 text-center">
+                                  <div className="text-red-600 dark:text-red-400">
+                                    <h3 className="font-semibold mb-2">⚠️ 用户数据加载失败</h3>
+                                    <p className="text-sm mb-3">
+                                      可能的原因：
+                                    </p>
+                                    <ul className="text-sm text-left space-y-1 max-w-md mx-auto">
+                                      <li>• 权限不足：当前用户不是管理员</li>
+                                      <li>• 会话过期：需要重新登录</li>
+                                      <li>• 网络连接问题：检查网络连接</li>
+                                      <li>• 服务器错误：请联系管理员</li>
+                                    </ul>
+                                  </div>
+                                  <div className="flex gap-2 justify-center">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={refreshUsers}
+                                      className="text-xs"
+                                    >
+                                      🔄 重新加载
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.location.reload()}
+                                      className="text-xs"
+                                    >
+                                      🔄 刷新页面
+                                    </Button>
+                                  </div>
+                                  <details className="text-xs text-gray-500">
+                                    <summary className="cursor-pointer hover:text-gray-700">查看详细错误信息</summary>
+                                    <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-left overflow-auto">
+                                      {JSON.stringify(usersError, null, 2)}
+                                    </pre>
+                                  </details>
+                                </div>
                               ) : (
-                                "暂无用户数据"
+                                <div className="space-y-2 text-center">
+                                  <p>📭 暂无用户数据</p>
+                                  <p className="text-xs text-gray-500">
+                                    检查当前用户是否有管理员权限
+                                  </p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={refreshUsers}
+                                    className="text-xs"
+                                  >
+                                    🔄 重新加载
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           </TableCell>

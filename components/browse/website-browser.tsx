@@ -28,6 +28,7 @@ import { SubmitWebsiteDialog } from "./submit-website-dialog"
 import { Sidebar } from "@/components/layout/sidebar"
 import { FilterPanel } from "./filter-panel"
 import { cn } from "@/lib/utils"
+import { StaggerList } from "@/components/ui/motion/stagger-list"
 import { toast } from "sonner"
 
 // 使用 Website 类型
@@ -692,9 +693,12 @@ export function WebsiteBrowser({ onShowAuth }: WebsiteBrowserProps) {
                 <NoWebsites />
               )
             ) : (
-              <div className={getViewModeClasses()}>
-                {filteredWebsites.map((website) => renderWebsiteCard(website))}
-              </div>
+              <StaggerList
+                items={filteredWebsites}
+                className={getViewModeClasses()}
+                getKey={(w) => w.id}
+                renderItem={(w) => renderWebsiteCard(w)}
+              />
             )}
           </main>
         </div>

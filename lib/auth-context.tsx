@@ -185,7 +185,5 @@ export function useAuth() {
   return context
 }
 
-// 保持向后兼容性的别名
-export const SupabaseAuthProvider = AuthProvider
-export const useSupabaseAuth = useAuth
+// 向后兼容性别名已移除，统一使用 useAuth 和 AuthProvider
 // {{END MODIFICATIONS}}

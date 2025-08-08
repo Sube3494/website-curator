@@ -8,12 +8,11 @@ import { unstable_cache, revalidateTag } from 'next/cache'
 // GET /api/system-settings/[key] - 获取特定系统设置
 export async function GET(
   request: NextRequest,
-  { params }: { params: { key: string } }
+  { params }: { params: Promise<{ key: string }> }
 ) {
   try {
-    console.log('获取单个系统设置:', params.key)
-
-    const { key } = params
+    const { key } = await params
+    console.log('获取单个系统设置:', key)
     if (!key) {
       return NextResponse.json(
         { success: false, message: '缺少设置键名' },
@@ -62,7 +61,7 @@ export async function GET(
 // PUT /api/system-settings/[key] - 更新特定系统设置
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { key: string } }
+  { params }: { params: Promise<{ key: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -92,7 +91,7 @@ export async function PUT(
       )
     }
 
-    const { key } = params
+    const { key } = await params
     if (!key) {
       return NextResponse.json(
         { success: false, message: '缺少设置键名' },

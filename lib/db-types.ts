@@ -57,6 +57,11 @@ export interface Category {
 // 带使用数量的分类类型
 export interface CategoryWithUsage extends Category {
   website_count: number
+  
+  // 自定义字段 - 用于前端颜色管理
+  is_custom?: boolean
+  custom_from_hex?: string
+  custom_to_hex?: string
 }
 
 // 标签类型
@@ -71,6 +76,7 @@ export interface Website {
   id: string
   title: string
   url: string
+  url_hash?: string  // URL的SHA-256哈希值，用于重复检查
   description: string
   favicon?: string
   category_id: string

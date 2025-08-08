@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { UiPreferencesProvider } from "@/lib/ui-preferences"
+import { PageTransition } from "@/components/ui/motion/page-transition"
 import { useAuth } from "@/lib/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SystemSettingsProvider } from "@/lib/system-settings-context"
@@ -12,6 +14,7 @@ import { WebsiteBrowser } from "@/components/browse/website-browser"
 import { FavoritesPage } from "@/components/favorites/favorites-page"
 import { AuthProvider } from "@/lib/auth-context"
 import { ReactQueryProvider } from "@/lib/react-query-provider"
+import { useSystemSetting } from "@/lib/hooks/use-system-settings"
 import { PerformanceMonitor } from "@/components/ui/performance-monitor"
 import { Toaster } from "sonner"
 import { GlobalErrorHandler } from "@/components/ui/error-boundary"
@@ -20,12 +23,41 @@ import { SystemSettingsPage } from "@/components/settings/system-settings-page"
 import { useQueryClient } from "@tanstack/react-query"
 import { db } from "@/lib/db-client"
 import { websiteKeys } from "@/lib/hooks/use-websites"
+import { useSmartPreload } from "@/lib/hooks/use-smart-preload"
+import { warmUpApplication } from "@/lib/utils/component-preloader"
+import { usePageTransition, useTransitionPerformance } from "@/lib/hooks/use-page-transition"
+import { PageTransitionIndicator } from "@/components/ui/global-loading-indicator"
 
 function AppContent() {
   const { user } = useAuth()
   const [currentPage, setCurrentPage] = useState("browse")
   const [showAuth, setShowAuth] = useState(false)
   const queryClient = useQueryClient()
+  const { data: _animSetting } = useSystemSetting('enable_animation')
+  
+  // 智能预加载系统
+  const { preloadPage, clearPreloadCache: _clearPreloadCache } = useSmartPreload(currentPage, {
+    enabled: true,
+    preloadDelay: 300,
+    maxPreloadItems: 2,
+    userBehaviorTracking: true
+  })
+
+  // 页面切换状态管理
+  const { 
+    isTransitioning, 
+    fromPage, 
+    toPage, 
+    error: transitionError,
+    getTransitionDuration
+  } = usePageTransition(currentPage, {
+    minTransitionTime: 150,
+    maxTransitionTime: 2000,
+    debounceTime: 50
+  })
+
+  // 性能监控
+  const { recordTransition } = useTransitionPerformance()
 
   // 增强版的页面导航处理函数
   const handleNavigate = (page: string) => {
@@ -40,6 +72,9 @@ function AppContent() {
       setShowAuth(true)
       return
     }
+
+    // 预加载目标页面（如果尚未预加载）
+    preloadPage(page)
 
     // 直接设置当前页面，不经过其他中间状态
     setCurrentPage(page)
@@ -77,6 +112,32 @@ function AppContent() {
       // 登录成功后不强制跳转到browse
     }
   }, [user, showAuth])
+
+  // 应用预热 - 只在首次加载时执行
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      warmUpApplication().catch(error => {
+        console.warn('应用预热失败:', error)
+      })
+    }, 1000) // 延迟1秒避影响首屏加载
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // 记录页面切换性能
+  useEffect(() => {
+    if (!isTransitioning && fromPage && toPage) {
+      const duration = getTransitionDuration()
+      recordTransition(fromPage, toPage, duration)
+    }
+  }, [isTransitioning, fromPage, toPage, getTransitionDuration, recordTransition])
+
+  // 处理过渡错误
+  useEffect(() => {
+    if (transitionError) {
+      console.error('页面切换错误:', transitionError)
+    }
+  }, [transitionError])
 
   const renderPage = () => {
     switch (currentPage) {
@@ -190,9 +251,11 @@ function AppContent() {
   }
 
   return (
+    <PageTransition routeKey={currentPage}>
     <div className="min-h-screen flex flex-col">
       <GlobalErrorHandler />
       <NetworkMonitor />
+      <PageTransitionIndicator isLoading={isTransitioning} />
       <Header onNavigate={handleNavigate} currentPage={currentPage} onShowAuth={() => setShowAuth(true)} />
       <main className="flex-1">
         {renderPage()}
@@ -200,6 +263,7 @@ function AppContent() {
       <PerformanceMonitor />
       <Toaster position="top-right" richColors />
     </div>
+    </PageTransition>
   )
 }
 
@@ -214,7 +278,9 @@ export default function App() {
       >
         <AuthProvider>
           <SystemSettingsProvider>
-            <AppContent />
+            <UiPreferencesProvider>
+              <AppContent />
+            </UiPreferencesProvider>
           </SystemSettingsProvider>
         </AuthProvider>
       </ThemeProvider>

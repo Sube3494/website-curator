@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { X, Tag } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { X, Tag, AlertTriangle, CheckCircle, Loader2 } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { useCategories, useAddWebsite } from "@/lib/hooks/use-websites"
 import { toast } from "sonner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface SubmitWebsiteDialogProps {
     open: boolean
@@ -47,6 +48,15 @@ export function SubmitWebsiteDialog({ open, onOpenChange }: SubmitWebsiteDialogP
     const [tagInput, setTagInput] = useState("")
     const [tags, setTags] = useState<string[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
+    
+    // 重复检查相关状态
+    const [duplicateCheck, setDuplicateCheck] = useState({
+        isChecking: false,
+        isDuplicate: false,
+        existingWebsite: null as any,
+        hasChecked: false,
+        error: null as string | null
+    })
 
     // 重置表单
     useEffect(() => {
@@ -62,8 +72,62 @@ export function SubmitWebsiteDialog({ open, onOpenChange }: SubmitWebsiteDialogP
             setTags([])
             setTagInput("")
             setIsSubmitting(false)
+            setDuplicateCheck({
+                isChecking: false,
+                isDuplicate: false,
+                existingWebsite: null,
+                hasChecked: false,
+                error: null
+            })
         }
     }, [open])
+
+    // URL重复检查函数
+    const checkUrlDuplicate = useCallback(async (url: string) => {
+        if (!url || url.trim().length < 4) {
+            setDuplicateCheck(prev => ({ ...prev, hasChecked: false, error: null }))
+            return
+        }
+
+        setDuplicateCheck(prev => ({ ...prev, isChecking: true, error: null }))
+
+        try {
+            const response = await fetch(`/api/websites/check-duplicate?url=${encodeURIComponent(url.trim())}`)
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.message || '检查失败')
+            }
+
+            setDuplicateCheck({
+                isChecking: false,
+                isDuplicate: data.isDuplicate,
+                existingWebsite: data.existingWebsite || null,
+                hasChecked: true,
+                error: null
+            })
+        } catch (error) {
+            console.error('重复检查失败:', error)
+            setDuplicateCheck({
+                isChecking: false,
+                isDuplicate: false,
+                existingWebsite: null,
+                hasChecked: false,
+                error: error instanceof Error ? error.message : '检查失败'
+            })
+        }
+    }, [])
+
+    // URL输入防抖处理
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (newWebsite.url && newWebsite.url.trim()) {
+                checkUrlDuplicate(newWebsite.url)
+            }
+        }, 1000) // 1秒防抖
+
+        return () => clearTimeout(timer)
+    }, [newWebsite.url, checkUrlDuplicate])
 
     // 处理标签添加
     const handleAddTag = () => {
@@ -104,6 +168,18 @@ export function SubmitWebsiteDialog({ open, onOpenChange }: SubmitWebsiteDialogP
             new URL(newWebsite.url)
         } catch {
             toast.error('请输入有效的URL格式（如：https://example.com）')
+            return
+        }
+
+        // 检查重复状态
+        if (duplicateCheck.isDuplicate) {
+            toast.error(`网站已存在：${duplicateCheck.existingWebsite?.title || '未知网站'}`)
+            return
+        }
+
+        // 如果还在检查中，等待检查完成
+        if (duplicateCheck.isChecking) {
+            toast.info('正在检查网站是否重复，请稍候...')
             return
         }
 
@@ -184,14 +260,64 @@ export function SubmitWebsiteDialog({ open, onOpenChange }: SubmitWebsiteDialogP
                         <Label htmlFor="url" className="flex items-center gap-1">
                             网站地址 <span className="text-red-500">*</span>
                         </Label>
-                        <Input
-                            id="url"
-                            value={newWebsite.url}
-                            onChange={(e) => setNewWebsite({ ...newWebsite, url: e.target.value })}
-                            placeholder="https://example.com"
-                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                            disabled={isSubmitting}
-                        />
+                        <div className="relative">
+                            <Input
+                                id="url"
+                                value={newWebsite.url}
+                                onChange={(e) => setNewWebsite({ ...newWebsite, url: e.target.value })}
+                                placeholder="https://example.com"
+                                className={`transition-all duration-200 focus:ring-2 focus:ring-blue-500 pr-10 ${
+                                    duplicateCheck.isDuplicate ? 'border-red-500 focus:ring-red-500' : 
+                                    duplicateCheck.hasChecked && !duplicateCheck.isDuplicate ? 'border-green-500 focus:ring-green-500' : ''
+                                }`}
+                                disabled={isSubmitting}
+                            />
+                            {/* 重复检查状态指示器 */}
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                {duplicateCheck.isChecking && (
+                                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                                )}
+                                {duplicateCheck.hasChecked && !duplicateCheck.isChecking && !duplicateCheck.isDuplicate && (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                )}
+                                {duplicateCheck.isDuplicate && (
+                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 重复检查结果提示 */}
+                        {duplicateCheck.isDuplicate && duplicateCheck.existingWebsite && (
+                            <Alert className="border-red-200 bg-red-50">
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                                <AlertDescription className="text-sm text-red-700">
+                                    网站已存在：<span className="font-medium">{duplicateCheck.existingWebsite.title}</span>
+                                    {duplicateCheck.existingWebsite.submitted_by_user && (
+                                        <span className="block text-xs mt-1">
+                                            提交者：{duplicateCheck.existingWebsite.submitted_by_user.name}
+                                        </span>
+                                    )}
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        
+                        {duplicateCheck.hasChecked && !duplicateCheck.isDuplicate && !duplicateCheck.isChecking && (
+                            <Alert className="border-green-200 bg-green-50">
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <AlertDescription className="text-sm text-green-700">
+                                    网站地址可以使用
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {duplicateCheck.error && (
+                            <Alert className="border-yellow-200 bg-yellow-50">
+                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                <AlertDescription className="text-sm text-yellow-700">
+                                    检查重复时出错：{duplicateCheck.error}
+                                </AlertDescription>
+                            </Alert>
+                        )}
                     </div>
 
                     <div className="grid gap-2">

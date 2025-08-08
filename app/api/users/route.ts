@@ -9,7 +9,10 @@ import { db, getCurrentUserFromToken } from '@/lib/database'
 export async function GET(request: NextRequest) {
   try {
     // 验证身份
-    const token = request.headers.get('authorization')?.replace('Bearer ', '') || request.cookies.get('auth-token')?.value
+    const authHeader = request.headers.get('authorization')
+    const cookieToken = request.cookies.get('auth-token')?.value
+    const token = authHeader?.replace('Bearer ', '') || cookieToken
+    
     const currentUser = await getCurrentUserFromToken(token || '')
     
     // 只有管理员和超级管理员可以访问用户列表

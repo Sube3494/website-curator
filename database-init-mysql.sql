@@ -1,19 +1,3 @@
-/*
- Navicat Premium Dump SQL
-
- Source Server         : huawei
- Source Server Type    : MySQL
- Source Server Version : 50744 (5.7.44)
- Source Host           : 189.1.220.229:3306
- Source Schema         : website_curator
-
- Target Server Type    : MySQL
- Target Server Version : 50744 (5.7.44)
- File Encoding         : 65001
-
- Date: 06/08/2025 16:39:07
-*/
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -155,6 +139,7 @@ CREATE TABLE `websites`  (
   `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `url_hash` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT 'URL标准化后的SHA-256哈希值，用于高效重复检查',
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `favicon` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
   `category_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
@@ -167,6 +152,7 @@ CREATE TABLE `websites`  (
   INDEX `idx_websites_status`(`status`) USING BTREE,
   INDEX `idx_websites_category_id`(`category_id`) USING BTREE,
   INDEX `idx_websites_created_at`(`created_at`) USING BTREE,
+  INDEX `idx_websites_url_hash`(`url_hash`) USING BTREE,
   CONSTRAINT `websites_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `websites_ibfk_2` FOREIGN KEY (`submitted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;

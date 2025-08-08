@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { LoginForm } from "./login-form"
 import { RegisterForm } from "./register-form"
 import { Globe, Sparkles, Star, ArrowLeft } from "lucide-react"
-import { useSupabaseAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { AccountDisabledModal } from "./account-disabled-modal"
 
 // 定义一个自定义事件，用于退出登录页面
@@ -16,7 +16,7 @@ const exitAuthPage = () => {
 export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [showDisabledModal, setShowDisabledModal] = useState(false)
-  const { showAccountDisabledDialog } = useSupabaseAuth()
+  const { showAccountDisabledDialog } = useAuth()
 
   // 初始化时检查全局状态中是否有禁用标志
   useEffect(() => {

@@ -139,7 +139,9 @@ export async function getCurrentUserFromToken(token: string): Promise<any | null
   if (!decodedToken || !decodedToken.userId) return null
   
   const query = `SELECT * FROM users WHERE id = ? AND status = 'active'`
-  return await executeQuerySingle(query, [decodedToken.userId])
+  const user = await executeQuerySingle(query, [decodedToken.userId])
+  
+  return user
 }
 
 export async function deleteUserSession(token: string): Promise<void> {

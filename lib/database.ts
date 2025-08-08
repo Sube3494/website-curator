@@ -30,6 +30,7 @@ import {
   AuthenticationError,
   ValidationError
 } from './db-types'
+import { normalizeUrl, NormalizedUrlResult } from './utils/url-normalizer'
 
 // 数据库操作类
 export class Database {
@@ -414,10 +415,89 @@ export class Database {
     }
   }
 
+  /**
+   * 检查URL是否重复
+   * @param url 待检查的URL
+   * @returns 重复的网站信息，如果没有重复返回null
+   */
+  async checkUrlDuplicate(url: string): Promise<Website | null> {
+    try {
+      // URL标准化处理
+      const normalized = normalizeUrl(url);
+      
+      if (!normalized.isValid) {
+        throw new ValidationError(`无效的URL格式: ${normalized.error}`);
+      }
+
+      // 查询数据库中是否存在相同的URL哈希
+      const query = `
+        SELECT 
+          w.*,
+          c.name as category_name,
+          c.color_from as category_color_from,
+          c.color_to as category_color_to,
+          u.name as submitted_by_name,
+          u.email as submitted_by_email
+        FROM websites w
+        LEFT JOIN categories c ON w.category_id = c.id
+        LEFT JOIN users u ON w.submitted_by = u.id
+        WHERE w.url_hash = ? OR w.url = ?
+        LIMIT 1
+      `;
+
+      const results = await executeQuery(query, [normalized.hash, normalized.normalizedUrl]);
+      
+      if (results.length === 0) {
+        return null;
+      }
+
+      const row = results[0] as any;
+      return {
+        id: row.id,
+        title: row.title,
+        url: row.url,
+        description: row.description,
+        favicon: row.favicon,
+        category_id: row.category_id,
+        status: row.status,
+        submitted_by: row.submitted_by,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        category: row.category_name ? {
+          id: row.category_id,
+          name: row.category_name,
+          color_from: row.category_color_from,
+          color_to: row.category_color_to,
+          created_at: ''
+        } : undefined,
+        submitted_by_user: row.submitted_by_name ? {
+          id: row.submitted_by,
+          name: row.submitted_by_name,
+          email: row.submitted_by_email
+        } : undefined
+      };
+    } catch (error) {
+      console.error('检查URL重复失败:', error);
+      throw new DatabaseError('检查URL重复失败');
+    }
+  }
+
   async createWebsite(websiteData: WebsiteSubmission & { submitted_by?: string }): Promise<Website> {
     try {
       return await executeTransaction(async (connection) => {
         const websiteId = generateUUID()
+
+        // 第一步：检查URL重复
+        const existingWebsite = await this.checkUrlDuplicate(websiteData.url);
+        if (existingWebsite) {
+          throw new ValidationError(`网站已存在：${existingWebsite.title} (${existingWebsite.url})`);
+        }
+
+        // URL标准化处理
+        const normalized = normalizeUrl(websiteData.url);
+        if (!normalized.isValid) {
+          throw new ValidationError(`无效的URL格式: ${normalized.error}`);
+        }
 
         // 检查是否应该自动批准
         let status = 'pending'
@@ -438,16 +518,17 @@ export class Database {
           }
         }
 
-        // 插入网站数据
+        // 插入网站数据（包含URL哈希）
         const websiteQuery = `
-          INSERT INTO websites (id, title, url, description, category_id, submitted_by, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO websites (id, title, url, url_hash, description, category_id, submitted_by, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `
 
         await connection.execute(websiteQuery, [
           websiteId,
           websiteData.title,
-          websiteData.url,
+          normalized.normalizedUrl, // 使用标准化的URL
+          normalized.hash,           // 添加URL哈希
           websiteData.description,
           websiteData.category_id,
           websiteData.submitted_by || null,
